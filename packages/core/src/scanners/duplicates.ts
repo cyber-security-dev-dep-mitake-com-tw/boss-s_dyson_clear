@@ -146,9 +146,11 @@ export async function scanDuplicates(ctx: ScanContext): Promise<ScannerResult> {
 
 /** Merge policy — see module doc. Exported for tests. */
 export function pickCanonical(group: FileRec[]): FileRec {
+  // shape-agnostic: split on either separator so POSIX-style paths classify
+  // identically on any host (and real win32 paths work on Windows)
   const inPreferred = (rec: FileRec) =>
     rec.path
-      .split(path.sep)
+      .split(/[\\/]+/)
       .slice(0, -1)
       .some((seg) => PREFERRED_DIRS.has(seg.toLowerCase()));
   return [...group].sort((a, b) => {

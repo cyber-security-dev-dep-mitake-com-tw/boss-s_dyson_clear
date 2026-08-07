@@ -31,7 +31,9 @@ export async function scanJunk(ctx: ScanContext): Promise<ScannerResult> {
 // -- sandbox ------------------------------------------------------------------
 
 function segmentNames(root: string, filePath: string): string[] {
-  return path.relative(root, path.dirname(filePath)).split(path.sep).filter(Boolean);
+  // split on either separator — walk() emits host-native paths, but this keeps
+  // the classification identical for POSIX-shaped fixtures on any host
+  return path.relative(root, path.dirname(filePath)).split(/[\\/]+/).filter(Boolean);
 }
 
 async function scanSandbox(ctx: ScanContext, root: string): Promise<ScannerResult> {

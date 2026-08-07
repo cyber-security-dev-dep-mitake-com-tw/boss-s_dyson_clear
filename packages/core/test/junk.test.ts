@@ -31,7 +31,10 @@ describe('junk scanner (sandbox rules)', () => {
     await cleanup(root);
   });
 
-  const flagged = (suffix: string) => result.candidates.some((c) => c.subjectKey.endsWith(suffix));
+  // subjectKey uses the host separator (walk emits native paths) — normalize
+  // to '/' so these assertions hold on Windows too
+  const norm = (p: string) => p.split(/[\\/]+/).join('/');
+  const flagged = (suffix: string) => result.candidates.some((c) => norm(c.subjectKey).endsWith(suffix));
 
   it('flags files inside Caches/tmp/Logs/.Trash dirs', () => {
     expect(flagged('Caches/chrome/gpu.bin')).toBe(true);

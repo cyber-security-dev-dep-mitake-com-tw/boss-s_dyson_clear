@@ -83,7 +83,11 @@ jobs:
               -subj "/CN=SweepDeck Dev (self-signed)" \
               -addext "extendedKeyUsage=codeSigning" \
               -addext "keyUsage=digitalSignature"
-            openssl pkcs12 -export \
+            # -legacy: OpenSSL 3 defaults to ciphers macOS `security import` rejects
+            openssl pkcs12 -export -legacy \
+              -inkey "$RUNNER_TEMP/selfsign.key" -in "$RUNNER_TEMP/selfsign.crt" \
+              -out "$RUNNER_TEMP/selfsign.p12" -password pass:sweepdeck-selfsign \
+            || openssl pkcs12 -export \
               -inkey "$RUNNER_TEMP/selfsign.key" -in "$RUNNER_TEMP/selfsign.crt" \
               -out "$RUNNER_TEMP/selfsign.p12" -password pass:sweepdeck-selfsign
             echo "CSC_LINK=$RUNNER_TEMP/selfsign.p12" >> "$GITHUB_ENV"
