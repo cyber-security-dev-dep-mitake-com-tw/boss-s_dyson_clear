@@ -1,0 +1,264 @@
+<!doctype html>
+<!-- SweepDeck wireframe 02 — Smart Clean. Shows the full flow top-to-bottom:
+     category select → live phase stream (scan→verify→merge) → grouped results →
+     approval bar → confirm modal → receipt toast. This is THE canonical
+     approval-gate pattern; every destructive view reuses it verbatim. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SweepDeck — Smart Clean</title>
+<style>
+:root{
+  --bg-base:#0e141a;--bg-raised:#151c23;--bg-overlay:#1c2731;--bg-inset:#0a0f14;
+  --text-1:#e8eef2;--text-2:#a9b6bf;--text-3:#6d7d88;--on-accent:#08222f;
+  --accent:#5fb0dd;--accent-hover:#7ec4e8;--accent-subtle:rgba(95,176,221,.14);
+  --success:#33b374;--success-subtle:rgba(51,179,116,.14);
+  --warning:#d9a514;--warning-subtle:rgba(217,165,20,.14);
+  --danger:#e05252;--danger-subtle:rgba(224,82,82,.14);
+  --conf-high:#33b374;--conf-med:#d9a514;--conf-low:#e07856;
+  --track:rgba(255,255,255,.07);
+  --border:rgba(255,255,255,.08);--border-strong:rgba(255,255,255,.16);
+  --focus:#7ec4e8;
+  --r-sm:4px;--r-md:6px;--r-lg:10px;--r-xl:14px;
+  --sh-lg:0 12px 32px rgba(0,0,0,.5),0 2px 8px rgba(0,0,0,.35);
+  --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font:13px/1.45 system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--bg-base);color:var(--text-1)}
+.app{display:grid;grid-template-columns:216px 1fr;grid-template-rows:1fr auto;height:100vh}
+.sidebar{background:var(--bg-inset);border-right:1px solid var(--border);padding:16px 8px;display:flex;flex-direction:column;gap:2px}
+.brand{display:flex;align-items:center;gap:8px;padding:4px 10px 14px;font-size:15px;font-weight:600}
+.brand .logo{width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 50% 45%,#cfe6f0 0 34%,#7ec4e8 40%,#29465a 62%,#14242e 100%)}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav a{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:var(--r-md);color:var(--text-2);text-decoration:none;font-weight:500}
+.nav a .ic{width:18px;text-align:center;color:var(--text-3)}
+.nav a:hover{background:rgba(255,255,255,.04);color:var(--text-1)}
+.nav a.active{background:var(--accent-subtle);color:var(--accent-hover)}
+.nav a.active .ic{color:var(--accent)}
+.main{display:flex;flex-direction:column;overflow:hidden}
+.content{flex:1;overflow:auto;padding:24px}
+.statusbar{grid-column:1/-1;display:flex;align-items:center;gap:16px;height:28px;padding:0 12px;background:var(--bg-inset);border-top:1px solid var(--border);font-size:11px;color:var(--text-3)}
+.statusbar .dot{width:7px;height:7px;border-radius:50%;background:var(--warning)}
+.statusbar .grow{flex:1}
+h1{font-size:18px;font-weight:600}
+.card{background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--r-lg)}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:var(--r-md);border:1px solid var(--border-strong);background:transparent;color:var(--text-1);font:inherit;font-weight:600;cursor:pointer}
+.btn:hover{background:rgba(255,255,255,.05)}
+.btn:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.btn.primary{background:var(--accent);border-color:transparent;color:var(--on-accent)}
+.btn.primary:hover{background:var(--accent-hover)}
+.btn.sm{padding:4px 10px;font-size:12px;font-weight:500}
+.muted{color:var(--text-3)}.sec{color:var(--text-2)}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:var(--mono);font-size:12px}
+input[type=checkbox]{accent-color:var(--accent);width:15px;height:15px}
+.anno{margin:30px 0 10px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);font-weight:700}
+.anno:first-of-type{margin-top:18px}
+/* step A — categories */
+.cats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.cat{display:flex;gap:10px;padding:12px;align-items:flex-start;cursor:pointer}
+.cat b{display:block;font-weight:600}
+.cat small{color:var(--text-3)}
+/* step B — phase stream */
+.phases{padding:16px;display:flex;flex-direction:column;gap:12px}
+.phase{display:grid;grid-template-columns:130px 1fr 90px;gap:14px;align-items:center}
+.phase .name{display:flex;align-items:center;gap:8px;font-weight:600}
+.st{width:16px;height:16px;border-radius:50%;display:grid;place-items:center;font-size:10px;flex:none}
+.st.done{background:var(--success);color:#06281a}
+.st.run{border:2px solid var(--accent);border-top-color:transparent}
+.st.wait{border:2px solid var(--border-strong)}
+.bar{height:8px;border-radius:999px;background:var(--track);overflow:hidden}
+.bar>i{display:block;height:100%;border-radius:999px;background:var(--accent)}
+.bar>i.ok{background:var(--success)}
+.evt{font-family:var(--mono);font-size:11px;color:var(--text-3);background:var(--bg-inset);border-top:1px solid var(--border);padding:10px 16px;border-radius:0 0 var(--r-lg) var(--r-lg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* step C — results */
+.group{margin-bottom:12px}
+.group summary{list-style:none;display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer}
+.group summary::-webkit-details-marker{display:none}
+.caret{color:var(--text-3);transition:transform 120ms}
+details[open] .caret{transform:rotate(90deg)}
+.group .grow{flex:1}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600}
+.badge .bdot{width:6px;height:6px;border-radius:50%}
+.conf-high{background:var(--success-subtle);color:#7fe0af}.conf-high .bdot{background:var(--conf-high)}
+.conf-med{background:var(--warning-subtle);color:#eecb6b}.conf-med .bdot{background:var(--conf-med)}
+.conf-low{background:rgba(224,120,86,.14);color:#f0a184}.conf-low .bdot{background:var(--conf-low)}
+.rows{border-top:1px solid var(--border)}
+.row{display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--border)}
+.row:last-child{border-bottom:0}
+.row .path{font-family:var(--mono);font-size:11px;color:var(--text-3)}
+/* approval bar */
+.approve-bar{position:sticky;bottom:0;margin-top:20px;display:flex;align-items:center;gap:16px;padding:12px 16px;background:var(--bg-overlay);border:1px solid var(--border-strong);border-radius:var(--r-lg);box-shadow:var(--sh-lg)}
+.approve-bar .grow{flex:1}
+/* modal + toast (flow panels) */
+.flowgrid{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start;margin-bottom:8px}
+.modal{background:var(--bg-overlay);border:1px solid var(--border-strong);border-radius:var(--r-xl);box-shadow:var(--sh-lg);padding:20px}
+.modal h3{font-size:15px;margin-bottom:4px}
+.modal ul{list-style:none;margin:12px 0;display:flex;flex-direction:column;gap:8px}
+.modal li{display:flex;gap:10px;color:var(--text-2)}
+.modal li .tick{color:var(--accent);flex:none}
+.modal .actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
+.toast{display:flex;align-items:center;gap:12px;background:var(--bg-overlay);border:1px solid var(--border-strong);border-left:3px solid var(--success);border-radius:var(--r-lg);box-shadow:var(--sh-lg);padding:12px 16px}
+.toast .t-ic{color:var(--success);font-size:16px}
+.toast .grow{flex:1}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="brand"><span class="logo"></span>SweepDeck</div>
+    <nav class="nav" aria-label="Primary">
+      <a href="01-dashboard.html"><span class="ic">&#8962;</span>Dashboard</a>
+      <a class="active" href="02-smart-clean.html" aria-current="page"><span class="ic">&#10022;</span>Smart Clean</a>
+      <a href="03-uninstaller.html"><span class="ic">&#8862;</span>Uninstaller</a>
+      <a href="04-large-files.html"><span class="ic">&#9636;</span>Large Files</a>
+      <a href="05-duplicates.html"><span class="ic">&#10697;</span>Duplicates</a>
+      <a href="06-disk-status.html"><span class="ic">&#9684;</span>Disk Status</a>
+      <a href="07-processes.html"><span class="ic">&#8801;</span>Processes</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <div class="content">
+
+      <h1>Smart Clean</h1>
+      <p class="sec">Wireframe shows all four states of the flow stacked vertically; in the app they replace each other.</p>
+
+      <div class="anno">State 1 &mdash; choose categories</div>
+      <div class="cats">
+        <label class="cat card"><input type="checkbox" checked><span><b>User caches</b><small>App &amp; browser caches</small></span></label>
+        <label class="cat card"><input type="checkbox" checked><span><b>Temp files</b><small>/tmp, app temp dirs</small></span></label>
+        <label class="cat card"><input type="checkbox" checked><span><b>Logs</b><small>Older than 7 days</small></span></label>
+        <label class="cat card"><input type="checkbox" checked><span><b>Browser caches</b><small>Chrome, Safari, Edge</small></span></label>
+        <label class="cat card"><input type="checkbox"><span><b>Trash</b><small>Empty items &gt; 30 days</small></span></label>
+      </div>
+      <div style="margin-top:12px"><button class="btn primary">Scan selected</button></div>
+
+      <div class="anno">State 2 &mdash; live phase stream (WorkflowEvent over IPC)</div>
+      <div class="card">
+        <div class="phases">
+          <div class="phase">
+            <span class="name"><span class="st done">&#10003;</span>Scan</span>
+            <div class="bar"><i class="ok" style="width:100%"></i></div>
+            <span class="num sec" style="text-align:right">48,211 files</span>
+          </div>
+          <div class="phase">
+            <span class="name"><span class="st run" aria-label="running"></span>Verify</span>
+            <div class="bar"><i style="width:62%"></i></div>
+            <span class="num sec" style="text-align:right">62%</span>
+          </div>
+          <div class="phase">
+            <span class="name"><span class="st wait"></span>Merge plan</span>
+            <div class="bar"></div>
+            <span class="muted" style="text-align:right">waiting</span>
+          </div>
+        </div>
+        <div class="evt">task_progress &middot; verify &middot; safety-verifier@1 &middot; checking HELD_OPEN_BY edges for ~/Library/Caches/com.google.Chrome &hellip;</div>
+      </div>
+      <div style="margin-top:10px"><button class="btn sm">Cancel scan</button></div>
+
+      <div class="anno">State 3 &mdash; results grouped by rule &middot; smart-select pre-checked</div>
+
+      <details class="group card" open>
+        <summary>
+          <span class="caret">&#9656;</span><input type="checkbox" checked aria-label="Select group">
+          <b>Chrome caches</b>
+          <span class="mono muted">mac.browser-cache.chrome</span>
+          <span class="badge conf-high"><span class="bdot"></span>high &middot; 0.97</span>
+          <span class="grow"></span>
+          <span class="sec">3 locations</span><b class="num">1.9 GB</b>
+        </summary>
+        <div class="rows">
+          <div class="row"><input type="checkbox" checked><span>GPU cache<br><span class="path">~/Library/Caches/Google/Chrome/&hellip;/GPUCache</span></span><span class="num sec">410 MB</span></div>
+          <div class="row"><input type="checkbox" checked><span>HTTP cache<br><span class="path">~/Library/Caches/Google/Chrome/Default/Cache</span></span><span class="num sec">1.2 GB</span></div>
+          <div class="row"><input type="checkbox" checked><span>Code cache<br><span class="path">~/Library/&hellip;/Code Cache/js</span></span><span class="num sec">290 MB</span></div>
+        </div>
+      </details>
+
+      <details class="group card" open>
+        <summary>
+          <span class="caret">&#9656;</span><input type="checkbox" checked aria-label="Select group">
+          <b>Stale logs (&gt; 7 days)</b>
+          <span class="mono muted">mac.logs.older-than-7d</span>
+          <span class="badge conf-high"><span class="bdot"></span>high &middot; 0.93</span>
+          <span class="grow"></span>
+          <span class="sec">118 files</span><b class="num">340 MB</b>
+        </summary>
+        <div class="rows">
+          <div class="row"><input type="checkbox" checked><span>Unified logs<br><span class="path">~/Library/Logs/&hellip; (94 files)</span></span><span class="num sec">265 MB</span></div>
+          <div class="row"><input type="checkbox" checked><span>Crash reports<br><span class="path">~/Library/Logs/DiagnosticReports (24 files)</span></span><span class="num sec">75 MB</span></div>
+        </div>
+      </details>
+
+      <details class="group card">
+        <summary>
+          <span class="caret">&#9656;</span><input type="checkbox" aria-label="Select group">
+          <b>App temp folders</b>
+          <span class="mono muted">mac.temp.app-scoped</span>
+          <span class="badge conf-med"><span class="bdot"></span>medium &middot; 0.71</span>
+          <span class="grow"></span>
+          <span class="sec">31 files</span><b class="num">160 MB</b>
+        </summary>
+      </details>
+
+      <details class="group card">
+        <summary>
+          <span class="caret">&#9656;</span><input type="checkbox" aria-label="Select group" disabled>
+          <b>Slack cache <span class="muted" style="font-weight:400">&mdash; skipped, file held open</span></b>
+          <span class="mono muted">mac.user-cache.generic</span>
+          <span class="badge conf-low"><span class="bdot"></span>low &middot; 0.38</span>
+          <span class="grow"></span>
+          <span class="sec">HELD_OPEN_BY Slack (pid 883)</span><b class="num muted">62 MB</b>
+        </summary>
+      </details>
+
+      <!-- APPROVAL GATE: summary bar (shared pattern) -->
+      <div class="approve-bar" role="region" aria-label="Approval bar">
+        <span><b class="num">142 items</b> selected <span class="muted">&middot; 1 group skipped (in use) &middot; smart-select applied</span></span>
+        <span class="grow"></span>
+        <button class="btn sm">Deselect all</button>
+        <button class="btn primary">Review &amp; Clean 2.4 GB</button>
+      </div>
+
+      <div class="anno">State 4 &mdash; confirm modal (the human gate) &rarr; receipt toast</div>
+      <div class="flowgrid">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="cm-t">
+          <h3 id="cm-t">Move 142 items to Trash?</h3>
+          <span class="sec">Exactly what will happen:</span>
+          <ul>
+            <li><span class="tick">&#10003;</span>142 files (2.4 GB) move to the system Trash &mdash; nothing is permanently deleted</li>
+            <li><span class="tick">&#10003;</span>Chrome caches 1.9 GB &middot; stale logs 340 MB &middot; app temp 160 MB</li>
+            <li><span class="tick">&#10003;</span>1 group skipped automatically: Slack cache is held open (pid 883)</li>
+            <li><span class="tick">&#10003;</span>A receipt is written for every item &mdash; one-click Undo restores original paths</li>
+          </ul>
+          <div class="actions">
+            <button class="btn">Cancel</button>
+            <button class="btn primary">Move to Trash</button>
+          </div>
+        </div>
+        <div>
+          <div class="toast" role="status">
+            <span class="t-ic">&#10003;</span>
+            <span><b>Cleaned 2.4 GB</b><br><span class="sec">142 items moved to Trash &middot; receipt #341</span></span>
+            <span class="grow"></span>
+            <button class="btn sm">Undo</button>
+            <button class="btn sm">View receipt</button>
+          </div>
+          <p class="muted" style="margin-top:10px;font-size:12px">Toast persists 10 s, then lives in Dashboard &rarr; Recent receipts. Undo never expires until the Trash is emptied.</p>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <footer class="statusbar">
+    <span class="dot" aria-hidden="true"></span><span>Verifying&hellip; 62%</span>
+    <span class="num">run 8f2c &middot; phase verify</span>
+    <span class="grow"></span>
+    <span>Last scan 14:32</span><span>v0.4.1</span>
+  </footer>
+
+</div>
+</body>
+</html>

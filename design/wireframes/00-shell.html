@@ -1,0 +1,111 @@
+<!doctype html>
+<!-- SweepDeck wireframe 00 — App shell. All values from design/tokens.json (dark theme = primary). -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SweepDeck — Shell</title>
+<style>
+:root{
+  --bg-base:#0e141a;--bg-raised:#151c23;--bg-overlay:#1c2731;--bg-inset:#0a0f14;
+  --text-1:#e8eef2;--text-2:#a9b6bf;--text-3:#6d7d88;--on-accent:#08222f;
+  --accent:#5fb0dd;--accent-hover:#7ec4e8;--accent-subtle:rgba(95,176,221,.14);
+  --success:#33b374;--success-subtle:rgba(51,179,116,.14);
+  --warning:#d9a514;--warning-subtle:rgba(217,165,20,.14);
+  --danger:#e05252;--danger-subtle:rgba(224,82,82,.14);
+  --info:#4d9fd6;
+  --conf-high:#33b374;--conf-med:#d9a514;--conf-low:#e07856;
+  --c1:#3d8fe0;--c2:#d95926;--c3:#199e70;--c4:#c98500;--c5:#d55181;--c6:#008300;--c7:#9085e9;--c8:#e66767;
+  --track:rgba(255,255,255,.07);
+  --border:rgba(255,255,255,.08);--border-strong:rgba(255,255,255,.16);
+  --focus:#7ec4e8;--scrim:rgba(4,8,11,.62);
+  --r-sm:4px;--r-md:6px;--r-lg:10px;--r-xl:14px;--r-full:999px;
+  --sh-md:0 4px 12px rgba(0,0,0,.4);--sh-lg:0 12px 32px rgba(0,0,0,.5),0 2px 8px rgba(0,0,0,.35);
+  --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font:13px/1.45 system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--bg-base);color:var(--text-1)}
+.app{display:grid;grid-template-columns:216px 1fr;grid-template-rows:1fr auto;height:100vh}
+.sidebar{background:var(--bg-inset);border-right:1px solid var(--border);padding:16px 8px;display:flex;flex-direction:column;gap:2px}
+.brand{display:flex;align-items:center;gap:8px;padding:4px 10px 14px;font-size:15px;font-weight:600}
+.brand .logo{width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 50% 45%,#cfe6f0 0 34%,#7ec4e8 40%,#29465a 62%,#14242e 100%);box-shadow:0 0 8px rgba(126,196,232,.4)}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav a{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:var(--r-md);color:var(--text-2);text-decoration:none;font-weight:500}
+.nav a .ic{width:18px;text-align:center;color:var(--text-3)}
+.nav a:hover{background:rgba(255,255,255,.04);color:var(--text-1)}
+.nav a.active{background:var(--accent-subtle);color:var(--accent-hover)}
+.nav a.active .ic{color:var(--accent)}
+.nav a:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+.spacer{flex:1}
+.main{display:flex;flex-direction:column;overflow:hidden}
+.content{flex:1;overflow:auto;padding:24px}
+.statusbar{grid-column:1/-1;display:flex;align-items:center;gap:16px;height:28px;padding:0 12px;background:var(--bg-inset);border-top:1px solid var(--border);font-size:11px;color:var(--text-3)}
+.statusbar .dot{width:7px;height:7px;border-radius:50%;background:var(--success)}
+.statusbar .grow{flex:1}
+.card{background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--r-lg)}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:var(--r-md);border:1px solid var(--border-strong);background:transparent;color:var(--text-1);font:inherit;font-weight:600;cursor:pointer}
+.btn:hover{background:rgba(255,255,255,.05)}
+.btn:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.btn.primary{background:var(--accent);border-color:transparent;color:var(--on-accent)}
+.btn.primary:hover{background:var(--accent-hover)}
+.muted{color:var(--text-3)}.sec{color:var(--text-2)}
+.num{font-variant-numeric:tabular-nums}
+/* shell-specific */
+.empty{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center}
+.empty .ring{width:72px;height:72px;border-radius:50%;border:2px dashed var(--border-strong);display:grid;place-items:center;color:var(--text-3);font-size:24px}
+.keys{display:flex;gap:14px;margin-top:10px;font-size:11px;color:var(--text-3)}
+kbd{font-family:var(--mono);font-size:10px;background:var(--bg-overlay);border:1px solid var(--border-strong);border-bottom-width:2px;border-radius:4px;padding:1px 5px;color:var(--text-2)}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="brand"><span class="logo"></span>SweepDeck</div>
+    <nav class="nav" aria-label="Primary">
+      <a class="active" href="01-dashboard.html" aria-current="page"><span class="ic">&#8962;</span>Dashboard</a>
+      <a href="02-smart-clean.html"><span class="ic">&#10022;</span>Smart Clean</a>
+      <a href="03-uninstaller.html"><span class="ic">&#8862;</span>Uninstaller</a>
+      <a href="04-large-files.html"><span class="ic">&#9636;</span>Large Files</a>
+      <a href="05-duplicates.html"><span class="ic">&#10697;</span>Duplicates</a>
+      <a href="06-disk-status.html"><span class="ic">&#9684;</span>Disk Status</a>
+      <a href="07-processes.html"><span class="ic">&#8801;</span>Processes</a>
+    </nav>
+    <div class="spacer"></div>
+    <nav class="nav">
+      <a href="#"><span class="ic">&#9998;</span>Receipts &amp; Undo</a>
+      <a href="#"><span class="ic">&#9881;</span>Settings</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <div class="content">
+      <div class="empty">
+        <div class="ring">&#10022;</div>
+        <div>
+          <h1 style="font-size:18px;font-weight:600">Content area</h1>
+          <p class="sec" style="max-width:420px;margin-top:4px">Each sidebar view renders here. Destructive views end in the
+          shared approval bar, which is always the last element inside this scroll region &mdash; nothing executes without it.</p>
+        </div>
+        <button class="btn primary">Quick Scan</button>
+        <div class="keys">
+          <span><kbd>&#8984;1</kbd>&hellip;<kbd>&#8984;7</kbd> switch view</span>
+          <span><kbd>Tab</kbd> cycle controls</span>
+          <span><kbd>Space</kbd> toggle checkbox</span>
+          <span><kbd>Esc</kbd> dismiss modal</span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="statusbar">
+    <span class="dot" aria-hidden="true"></span><span>Engine ready</span>
+    <span class="num">Graph: 1.2M nodes &middot; 3.4M edges &middot; DB 84 MB</span>
+    <span class="grow"></span>
+    <span>Last scan 14:32</span>
+    <span>12 receipts (all undoable)</span>
+    <span>v0.4.1</span>
+  </footer>
+
+</div>
+</body>
+</html>

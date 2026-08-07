@@ -1,0 +1,210 @@
+<!doctype html>
+<!-- SweepDeck wireframe 06 — Disk Status. Volume cards, SMART chips, treemap
+     placeholder, TRIM advisory with explicit-consent gate (same modal pattern). -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SweepDeck — Disk Status</title>
+<style>
+:root{
+  --bg-base:#0e141a;--bg-raised:#151c23;--bg-overlay:#1c2731;--bg-inset:#0a0f14;
+  --text-1:#e8eef2;--text-2:#a9b6bf;--text-3:#6d7d88;--on-accent:#08222f;
+  --accent:#5fb0dd;--accent-hover:#7ec4e8;--accent-subtle:rgba(95,176,221,.14);
+  --success:#33b374;--success-subtle:rgba(51,179,116,.14);
+  --warning:#d9a514;--warning-subtle:rgba(217,165,20,.14);
+  --danger:#e05252;
+  --c1:#3d8fe0;--c2:#d95926;--c3:#199e70;--c4:#c98500;--c5:#d55181;--c6:#008300;--c7:#9085e9;--c8:#e66767;
+  --track:rgba(255,255,255,.07);
+  --border:rgba(255,255,255,.08);--border-strong:rgba(255,255,255,.16);
+  --focus:#7ec4e8;
+  --r-sm:4px;--r-md:6px;--r-lg:10px;--r-xl:14px;
+  --sh-lg:0 12px 32px rgba(0,0,0,.5),0 2px 8px rgba(0,0,0,.35);
+  --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font:13px/1.45 system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--bg-base);color:var(--text-1)}
+.app{display:grid;grid-template-columns:216px 1fr;grid-template-rows:1fr auto;height:100vh}
+.sidebar{background:var(--bg-inset);border-right:1px solid var(--border);padding:16px 8px;display:flex;flex-direction:column;gap:2px}
+.brand{display:flex;align-items:center;gap:8px;padding:4px 10px 14px;font-size:15px;font-weight:600}
+.brand .logo{width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 50% 45%,#cfe6f0 0 34%,#7ec4e8 40%,#29465a 62%,#14242e 100%)}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav a{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:var(--r-md);color:var(--text-2);text-decoration:none;font-weight:500}
+.nav a .ic{width:18px;text-align:center;color:var(--text-3)}
+.nav a:hover{background:rgba(255,255,255,.04);color:var(--text-1)}
+.nav a.active{background:var(--accent-subtle);color:var(--accent-hover)}
+.nav a.active .ic{color:var(--accent)}
+.main{display:flex;flex-direction:column;overflow:hidden}
+.content{flex:1;overflow:auto;padding:24px}
+.statusbar{grid-column:1/-1;display:flex;align-items:center;gap:16px;height:28px;padding:0 12px;background:var(--bg-inset);border-top:1px solid var(--border);font-size:11px;color:var(--text-3)}
+.statusbar .dot{width:7px;height:7px;border-radius:50%;background:var(--success)}
+.statusbar .grow{flex:1}
+h1{font-size:18px;font-weight:600}
+.card{background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--r-lg)}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:var(--r-md);border:1px solid var(--border-strong);background:transparent;color:var(--text-1);font:inherit;font-weight:600;cursor:pointer}
+.btn:hover{background:rgba(255,255,255,.05)}
+.btn:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.btn.primary{background:var(--accent);border-color:transparent;color:var(--on-accent)}
+.btn.primary:hover{background:var(--accent-hover)}
+.muted{color:var(--text-3)}.sec{color:var(--text-2)}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:var(--mono);font-size:12px}
+.anno{margin:26px 0 10px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);font-weight:700}
+/* volumes */
+.vols{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+.vol{padding:16px;display:flex;flex-direction:column;gap:10px}
+.vol .top{display:flex;align-items:center;gap:10px}
+.vol .top .grow{flex:1}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:600}
+.chip .cdot{width:6px;height:6px;border-radius:50%}
+.chip.ok{background:var(--success-subtle);color:#7fe0af}.chip.ok .cdot{background:var(--success)}
+.chip.na{background:var(--track);color:var(--text-3)}.chip.na .cdot{background:var(--text-3)}
+.chip.warn{background:var(--warning-subtle);color:#eecb6b}.chip.warn .cdot{background:var(--warning)}
+.bar{height:10px;border-radius:999px;background:var(--track);overflow:hidden}
+.bar>i{display:block;height:100%;border-radius:999px 0 0 999px;background:var(--c1)}
+.bar>i.hot{background:linear-gradient(90deg,var(--c1) 70%,var(--warning))}
+.vmeta{display:flex;gap:16px;font-size:12px;color:var(--text-3)}
+/* treemap */
+.tmap{margin-top:16px;padding:16px}
+.tmap h2{font-size:15px;margin-bottom:12px}
+.tgrid{display:grid;grid-template-columns:38fr 22fr 14fr 12fr 14fr;grid-template-rows:96px 72px;gap:3px}
+.tcell{border-radius:4px;padding:8px 10px;font-size:11px;font-weight:600;color:#fff;overflow:hidden;position:relative}
+.tcell small{display:block;font-weight:400;opacity:.85}
+.tcell:hover{outline:2px solid var(--accent-hover);outline-offset:-2px;cursor:pointer}
+/* trim card */
+.trim{margin-top:16px;padding:16px;display:flex;gap:16px;align-items:flex-start;border-left:3px solid var(--accent)}
+.trim .grow{flex:1}
+.flowgrid{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+.modal{background:var(--bg-overlay);border:1px solid var(--border-strong);border-radius:var(--r-xl);box-shadow:var(--sh-lg);padding:20px}
+.modal h3{font-size:15px;margin-bottom:4px}
+.modal ul{list-style:none;margin:12px 0;display:flex;flex-direction:column;gap:8px}
+.modal li{display:flex;gap:10px;color:var(--text-2)}
+.modal li .tick{color:var(--accent);flex:none}
+.modal .cmd{font-family:var(--mono);font-size:11px;background:var(--bg-inset);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text-2);margin:6px 0}
+.modal .actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
+.modal label{display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--text-2);margin-top:10px}
+input[type=checkbox]{accent-color:var(--accent);width:15px;height:15px}
+.toast{display:flex;align-items:center;gap:12px;background:var(--bg-overlay);border:1px solid var(--border-strong);border-left:3px solid var(--success);border-radius:var(--r-lg);box-shadow:var(--sh-lg);padding:12px 16px}
+.toast .t-ic{color:var(--success);font-size:16px}
+.toast .grow{flex:1}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="brand"><span class="logo"></span>SweepDeck</div>
+    <nav class="nav" aria-label="Primary">
+      <a href="01-dashboard.html"><span class="ic">&#8962;</span>Dashboard</a>
+      <a href="02-smart-clean.html"><span class="ic">&#10022;</span>Smart Clean</a>
+      <a href="03-uninstaller.html"><span class="ic">&#8862;</span>Uninstaller</a>
+      <a href="04-large-files.html"><span class="ic">&#9636;</span>Large Files</a>
+      <a href="05-duplicates.html"><span class="ic">&#10697;</span>Duplicates</a>
+      <a class="active" href="06-disk-status.html" aria-current="page"><span class="ic">&#9684;</span>Disk Status</a>
+      <a href="07-processes.html"><span class="ic">&#8801;</span>Processes</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <div class="content">
+
+      <h1>Disk Status</h1>
+      <p class="sec">Usage, SMART health (best-effort) and TRIM advice. SweepDeck never elevates without explicit consent.</p>
+
+      <div class="vols">
+        <div class="card vol">
+          <div class="top">
+            <b style="font-size:15px">Macintosh HD</b>
+            <span class="mono muted">apfs &middot; SSD</span>
+            <span class="grow"></span>
+            <span class="chip ok"><span class="cdot"></span>SMART: Verified</span>
+          </div>
+          <div class="bar" role="img" aria-label="72 percent used"><i class="hot" style="width:72%"></i></div>
+          <div class="vmeta">
+            <span><b class="num" style="color:var(--text-1)">361 GB</b> used</span>
+            <span><b class="num" style="color:var(--text-1)">139 GB</b> free</span>
+            <span>of 500 GB &middot; 72%</span>
+            <span style="color:var(--warning)">&#9888; under 30% free &mdash; consider a clean</span>
+          </div>
+        </div>
+
+        <div class="card vol">
+          <div class="top">
+            <b style="font-size:15px">Backup T7</b>
+            <span class="mono muted">exFAT &middot; external SSD</span>
+            <span class="grow"></span>
+            <span class="chip na"><span class="cdot"></span>SMART: unavailable over USB</span>
+          </div>
+          <div class="bar" role="img" aria-label="30 percent used"><i style="width:30%"></i></div>
+          <div class="vmeta">
+            <span><b class="num" style="color:var(--text-1)">600 GB</b> used</span>
+            <span><b class="num" style="color:var(--text-1)">1.4 TB</b> free</span>
+            <span>of 2.0 TB &middot; 30%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- treemap placeholder -->
+      <div class="card tmap">
+        <h2>Where the space goes <span class="muted" style="font-weight:400;font-size:12px">&mdash; top-level breakdown of Macintosh HD (treemap placeholder; final build zoomable)</span></h2>
+        <div class="tgrid" role="img" aria-label="Treemap of home volume breakdown">
+          <div class="tcell" style="background:var(--c1);grid-row:1/3">~/Library<small>128 GB &middot; caches, app support</small></div>
+          <div class="tcell" style="background:var(--c2);grid-row:1/3">Applications<small>74 GB</small></div>
+          <div class="tcell" style="background:var(--c3)">~/Movies<small>38 GB</small></div>
+          <div class="tcell" style="background:var(--c4)">~/Pictures<small>31 GB</small></div>
+          <div class="tcell" style="background:var(--c5)">~/Downloads<small>27 GB</small></div>
+          <div class="tcell" style="background:var(--c7)">~/Documents<small>22 GB</small></div>
+          <div class="tcell" style="background:var(--c6)">dev<small>19 GB</small></div>
+          <div class="tcell" style="background:var(--c8)">other<small>22 GB</small></div>
+        </div>
+      </div>
+
+      <!-- TRIM advisory: consent-gated elevation -->
+      <div class="card trim">
+        <span style="font-size:20px;color:var(--accent)">&#9670;</span>
+        <span class="grow">
+          <b>TRIM advisory</b><br>
+          <span class="sec">This SSD supports TRIM and macOS runs it automatically on APFS. A manual pass is optional and usually unnecessary.
+          Running it requires administrator elevation, so it only ever happens after you consent below.</span><br>
+          <span class="mono muted">would run: sudo trimforce enable &middot; requires reboot</span>
+        </span>
+        <button class="btn">Review TRIM command&hellip;</button>
+      </div>
+
+      <div class="anno">Consent modal (same gate pattern &mdash; nothing runs without it) &rarr; result toast</div>
+      <div class="flowgrid">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tm-t">
+          <h3 id="tm-t">Run TRIM with administrator privileges?</h3>
+          <span class="sec">Exactly what will happen:</span>
+          <div class="cmd">$ sudo trimforce enable</div>
+          <ul>
+            <li><span class="tick">&#10003;</span>macOS will prompt for your administrator password (SweepDeck never sees it)</li>
+            <li><span class="tick">&#10003;</span>The command output is captured to receipt #345</li>
+            <li><span class="tick">&#10003;</span>A reboot is required for the change to take effect</li>
+          </ul>
+          <label><input type="checkbox"> I understand this runs an elevated system command and may require a reboot</label>
+          <div class="actions">
+            <button class="btn">Cancel</button>
+            <button class="btn primary" disabled style="opacity:.45" title="Enabled once the consent box is checked">Run with elevation</button>
+          </div>
+        </div>
+        <div class="toast" role="status">
+          <span class="t-ic">&#10003;</span>
+          <span><b>TRIM command completed</b><br><span class="sec">output saved to receipt #345 &middot; reboot pending</span></span>
+          <span class="grow"></span>
+          <button class="btn" style="padding:4px 10px;font-size:12px">View output</button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <footer class="statusbar">
+    <span class="dot" aria-hidden="true"></span><span>Engine ready</span>
+    <span class="num">2 volumes &middot; SMART polled 5 min ago</span>
+    <span class="grow"></span>
+    <span>v0.4.1</span>
+  </footer>
+
+</div>
+</body>
+</html>

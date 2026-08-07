@@ -1,0 +1,24 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "declaration": false,
+    "sourceMap": false,
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@contracts": ["../core/src/contracts.ts"],
+      "@tokens": ["../../design/tokens.json"]
+    }
+  },
+  "include": [
+    "src",
+    "electron.vite.config.ts",
+    "../core/src/contracts.ts",
+    "../../design/tokens.json"
+  ]
+}

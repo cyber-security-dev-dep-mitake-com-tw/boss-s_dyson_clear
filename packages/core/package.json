@@ -1,0 +1,26 @@
+{
+  "name": "@sweepdeck/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "sweepdeck-core": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "pretest": "npm run build",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.0.0",
+    "systeminformation": "^5.23.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^22.0.0",
+    "vitest": "^3.0.0"
+  }
+}

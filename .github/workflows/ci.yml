@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build core
+        run: npm run build:core
+
+      - name: Unit tests (vitest)
+        run: npm test
+
+      - name: Install Robot Framework
+        run: pip install "robotframework>=7"
+
+      - name: Robot Framework QA suites
+        run: robot --outputdir robot-results --skiponfailure known-bug --variable CLI_PATH:${{ github.workspace }}/packages/core/dist/cli.js tests/robot
+
+      - name: Upload Robot results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: robot-results-${{ matrix.os }}
+          path: robot-results/

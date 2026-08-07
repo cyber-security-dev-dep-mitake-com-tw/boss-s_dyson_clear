@@ -1,0 +1,31 @@
+# SweepDeck packaging config (electron-builder ^26).
+# Icons and entitlements live at the REPO ROOT build/ directory.
+appId: com.mitake.sweepdeck
+productName: SweepDeck
+directories:
+  output: release
+  buildResources: ../../build
+npmRebuild: true
+asarUnpack:
+  - "**/*.node"
+files:
+  - out/**
+  - package.json
+mac:
+  category: public.app-category.utilities
+  icon: ../../build/icon.icns
+  target:
+    - dmg
+    - pkg
+  hardenedRuntime: true
+  entitlements: ../../build/entitlements.mac.plist
+  entitlementsInherit: ../../build/entitlements.mac.plist
+  notarize: false
+win:
+  icon: ../../build/icon.ico
+  target:
+    - nsis
+    - msi
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true

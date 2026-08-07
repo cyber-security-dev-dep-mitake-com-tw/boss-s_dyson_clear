@@ -1,0 +1,13 @@
+node_modules/
+dist/
+out/
+release/
+robot-results/
+*.log
+.DS_Store
+*.tsbuildinfo
+packages/app/dist-electron/
+packages/*/coverage/
+.env
+*.pfx
+*.p12

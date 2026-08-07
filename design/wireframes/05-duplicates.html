@@ -1,0 +1,220 @@
+<!doctype html>
+<!-- SweepDeck wireframe 05 — Duplicates. Entity-resolution groups, canonical copy
+     highlighted, keep/remove toggles. Same approval-gate pattern. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SweepDeck — Duplicates</title>
+<style>
+:root{
+  --bg-base:#0e141a;--bg-raised:#151c23;--bg-overlay:#1c2731;--bg-inset:#0a0f14;
+  --text-1:#e8eef2;--text-2:#a9b6bf;--text-3:#6d7d88;--on-accent:#08222f;
+  --accent:#5fb0dd;--accent-hover:#7ec4e8;--accent-subtle:rgba(95,176,221,.14);
+  --success:#33b374;--success-subtle:rgba(51,179,116,.14);
+  --warning:#d9a514;--warning-subtle:rgba(217,165,20,.14);
+  --danger:#e05252;
+  --conf-high:#33b374;--conf-med:#d9a514;--conf-low:#e07856;
+  --track:rgba(255,255,255,.07);
+  --border:rgba(255,255,255,.08);--border-strong:rgba(255,255,255,.16);
+  --focus:#7ec4e8;
+  --r-sm:4px;--r-md:6px;--r-lg:10px;--r-xl:14px;
+  --sh-lg:0 12px 32px rgba(0,0,0,.5),0 2px 8px rgba(0,0,0,.35);
+  --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font:13px/1.45 system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--bg-base);color:var(--text-1)}
+.app{display:grid;grid-template-columns:216px 1fr;grid-template-rows:1fr auto;height:100vh}
+.sidebar{background:var(--bg-inset);border-right:1px solid var(--border);padding:16px 8px;display:flex;flex-direction:column;gap:2px}
+.brand{display:flex;align-items:center;gap:8px;padding:4px 10px 14px;font-size:15px;font-weight:600}
+.brand .logo{width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 50% 45%,#cfe6f0 0 34%,#7ec4e8 40%,#29465a 62%,#14242e 100%)}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav a{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:var(--r-md);color:var(--text-2);text-decoration:none;font-weight:500}
+.nav a .ic{width:18px;text-align:center;color:var(--text-3)}
+.nav a:hover{background:rgba(255,255,255,.04);color:var(--text-1)}
+.nav a.active{background:var(--accent-subtle);color:var(--accent-hover)}
+.nav a.active .ic{color:var(--accent)}
+.main{display:flex;flex-direction:column;overflow:hidden}
+.content{flex:1;overflow:auto;padding:24px}
+.statusbar{grid-column:1/-1;display:flex;align-items:center;gap:16px;height:28px;padding:0 12px;background:var(--bg-inset);border-top:1px solid var(--border);font-size:11px;color:var(--text-3)}
+.statusbar .dot{width:7px;height:7px;border-radius:50%;background:var(--success)}
+.statusbar .grow{flex:1}
+h1{font-size:18px;font-weight:600}
+.card{background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--r-lg)}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:var(--r-md);border:1px solid var(--border-strong);background:transparent;color:var(--text-1);font:inherit;font-weight:600;cursor:pointer}
+.btn:hover{background:rgba(255,255,255,.05)}
+.btn:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.btn.primary{background:var(--accent);border-color:transparent;color:var(--on-accent)}
+.btn.primary:hover{background:var(--accent-hover)}
+.btn.sm{padding:4px 10px;font-size:12px;font-weight:500}
+.muted{color:var(--text-3)}.sec{color:var(--text-2)}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:var(--mono);font-size:12px}
+.anno{margin:26px 0 10px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);font-weight:700}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600}
+.badge .bdot{width:6px;height:6px;border-radius:50%}
+.conf-high{background:var(--success-subtle);color:#7fe0af}.conf-high .bdot{background:var(--conf-high)}
+.conf-med{background:var(--warning-subtle);color:#eecb6b}.conf-med .bdot{background:var(--conf-med)}
+/* header row */
+.headrow{display:flex;align-items:center;gap:12px;margin:16px 0}
+.headrow .grow{flex:1}
+/* groups */
+.dgroup{margin-bottom:14px;overflow:hidden}
+.dhead{display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--border);background:rgba(255,255,255,.02)}
+.copy{display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;padding:9px 16px;border-bottom:1px solid var(--border)}
+.copy:last-child{border-bottom:0}
+.copy .path{font-family:var(--mono);font-size:11px;color:var(--text-3)}
+.copy.canon{background:var(--accent-subtle);box-shadow:inset 2px 0 0 var(--accent)}
+.crown{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:999px;background:rgba(126,196,232,.16);color:var(--accent-hover);font-size:11px;font-weight:700}
+/* keep/remove segmented toggle */
+.seg{display:inline-flex;border:1px solid var(--border-strong);border-radius:999px;overflow:hidden}
+.seg button{font:inherit;font-size:11px;font-weight:600;padding:3px 12px;background:transparent;border:0;color:var(--text-3);cursor:pointer}
+.seg button:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+.seg .keep.on{background:var(--success-subtle);color:#7fe0af}
+.seg .rm.on{background:rgba(224,82,82,.16);color:#f3928f}
+.approve-bar{position:sticky;bottom:0;margin-top:20px;display:flex;align-items:center;gap:16px;padding:12px 16px;background:var(--bg-overlay);border:1px solid var(--border-strong);border-radius:var(--r-lg);box-shadow:var(--sh-lg)}
+.approve-bar .grow{flex:1}
+.flowgrid{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+.modal{background:var(--bg-overlay);border:1px solid var(--border-strong);border-radius:var(--r-xl);box-shadow:var(--sh-lg);padding:20px}
+.modal h3{font-size:15px;margin-bottom:4px}
+.modal ul{list-style:none;margin:12px 0;display:flex;flex-direction:column;gap:8px}
+.modal li{display:flex;gap:10px;color:var(--text-2)}
+.modal li .tick{color:var(--accent);flex:none}
+.modal .actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
+.toast{display:flex;align-items:center;gap:12px;background:var(--bg-overlay);border:1px solid var(--border-strong);border-left:3px solid var(--success);border-radius:var(--r-lg);box-shadow:var(--sh-lg);padding:12px 16px}
+.toast .t-ic{color:var(--success);font-size:16px}
+.toast .grow{flex:1}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="brand"><span class="logo"></span>SweepDeck</div>
+    <nav class="nav" aria-label="Primary">
+      <a href="01-dashboard.html"><span class="ic">&#8962;</span>Dashboard</a>
+      <a href="02-smart-clean.html"><span class="ic">&#10022;</span>Smart Clean</a>
+      <a href="03-uninstaller.html"><span class="ic">&#8862;</span>Uninstaller</a>
+      <a href="04-large-files.html"><span class="ic">&#9636;</span>Large Files</a>
+      <a class="active" href="05-duplicates.html" aria-current="page"><span class="ic">&#10697;</span>Duplicates</a>
+      <a href="06-disk-status.html"><span class="ic">&#9684;</span>Disk Status</a>
+      <a href="07-processes.html"><span class="ic">&#8801;</span>Processes</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <div class="content">
+
+      <h1>Duplicates</h1>
+      <p class="sec">23 groups &middot; 4.8 GB removable. Matching: size/ext blocking &rarr; partial hash &rarr; full SHA-256. The canonical copy is never selected for removal.</p>
+
+      <div class="headrow">
+        <button class="btn primary">&#10022; Smart select all</button>
+        <span class="sec">keeps the canonical copy in every group &mdash; oldest path in the most permanent location</span>
+        <span class="grow"></span>
+        <button class="btn sm">Expand all</button>
+      </div>
+
+      <!-- Group 1 -->
+      <div class="card dgroup">
+        <div class="dhead">
+          <b>IMG_4821.jpg</b>
+          <span class="mono muted">sha256 9c41&hellip;e2 &middot; 24.1 MB each</span>
+          <span class="badge conf-high"><span class="bdot"></span>exact match &middot; 1.00</span>
+          <span style="flex:1"></span>
+          <span class="sec">4 copies &middot; <b class="num" style="color:var(--text-1)">72.3 MB removable</b></span>
+        </div>
+        <div class="copy canon">
+          <span><span class="crown">&#9819; canonical &mdash; kept</span>&nbsp; <b>IMG_4821.jpg</b><br><span class="path">~/Pictures/Photos Library/originals/IMG_4821.jpg &middot; oldest copy, in library</span></span>
+          <span class="num sec">24.1 MB</span>
+          <span class="seg" role="group" aria-label="Keep or remove"><button class="keep on">Keep</button><button class="rm" disabled title="Canonical copy cannot be removed">Remove</button></span>
+        </div>
+        <div class="copy">
+          <span><b>IMG_4821.jpg</b><br><span class="path">~/Downloads/IMG_4821.jpg</span></span>
+          <span class="num sec">24.1 MB</span>
+          <span class="seg"><button class="keep">Keep</button><button class="rm on">Remove</button></span>
+        </div>
+        <div class="copy">
+          <span><b>IMG_4821 (1).jpg</b><br><span class="path">~/Downloads/IMG_4821 (1).jpg</span></span>
+          <span class="num sec">24.1 MB</span>
+          <span class="seg"><button class="keep">Keep</button><button class="rm on">Remove</button></span>
+        </div>
+        <div class="copy">
+          <span><b>IMG_4821.jpg</b><br><span class="path">~/Desktop/to-sort/IMG_4821.jpg</span></span>
+          <span class="num sec">24.1 MB</span>
+          <span class="seg"><button class="keep on">Keep</button><button class="rm">Remove</button></span>
+        </div>
+      </div>
+
+      <!-- Group 2 -->
+      <div class="card dgroup">
+        <div class="dhead">
+          <b>project-brief.pdf</b>
+          <span class="mono muted">sha256 51ab&hellip;77 &middot; 8.2 MB each</span>
+          <span class="badge conf-high"><span class="bdot"></span>exact match &middot; 1.00</span>
+          <span style="flex:1"></span>
+          <span class="sec">3 copies &middot; <b class="num" style="color:var(--text-1)">16.4 MB removable</b></span>
+        </div>
+        <div class="copy canon">
+          <span><span class="crown">&#9819; canonical &mdash; kept</span>&nbsp; <b>project-brief.pdf</b><br><span class="path">~/Documents/Projects/Acme/project-brief.pdf</span></span>
+          <span class="num sec">8.2 MB</span>
+          <span class="seg"><button class="keep on">Keep</button><button class="rm" disabled>Remove</button></span>
+        </div>
+        <div class="copy">
+          <span><b>project-brief.pdf</b><br><span class="path">~/Downloads/project-brief.pdf</span></span>
+          <span class="num sec">8.2 MB</span>
+          <span class="seg"><button class="keep">Keep</button><button class="rm on">Remove</button></span>
+        </div>
+        <div class="copy">
+          <span><b>project-brief copy.pdf</b><br><span class="path">~/Desktop/project-brief copy.pdf</span></span>
+          <span class="num sec">8.2 MB</span>
+          <span class="seg"><button class="keep">Keep</button><button class="rm on">Remove</button></span>
+        </div>
+      </div>
+
+      <p class="muted" style="font-size:12px">&#8942; 21 more groups &#8942;</p>
+
+      <!-- APPROVAL GATE: summary bar -->
+      <div class="approve-bar" role="region" aria-label="Approval bar">
+        <span><b class="num">37 copies</b> marked for removal <span class="muted">&middot; 23 canonicals kept &middot; smart select active</span></span>
+        <span class="grow"></span>
+        <button class="btn sm">Reset choices</button>
+        <button class="btn primary">Review &amp; Clean 4.8 GB</button>
+      </div>
+
+      <div class="anno">Confirm modal &rarr; receipt toast (shared gate pattern)</div>
+      <div class="flowgrid">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="dm-t">
+          <h3 id="dm-t">Remove 37 duplicate copies?</h3>
+          <span class="sec">Exactly what will happen:</span>
+          <ul>
+            <li><span class="tick">&#10003;</span>37 duplicate copies (4.8 GB) move to Trash</li>
+            <li><span class="tick">&#10003;</span>One canonical copy stays in place for all 23 groups &mdash; you lose no content</li>
+            <li><span class="tick">&#10003;</span>All matches verified by full SHA-256, not just name or size</li>
+            <li><span class="tick">&#10003;</span>Receipt #344 written; Undo restores every copy to its original path</li>
+          </ul>
+          <div class="actions">
+            <button class="btn">Cancel</button>
+            <button class="btn primary">Move to Trash</button>
+          </div>
+        </div>
+        <div class="toast" role="status">
+          <span class="t-ic">&#10003;</span>
+          <span><b>Removed 37 duplicates &mdash; 4.8 GB freed</b><br><span class="sec">canonical copies untouched &middot; receipt #344</span></span>
+          <span class="grow"></span>
+          <button class="btn sm">Undo</button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <footer class="statusbar">
+    <span class="dot" aria-hidden="true"></span><span>Engine ready</span>
+    <span class="num">23 duplicate groups &middot; 4.8 GB removable</span>
+    <span class="grow"></span>
+    <span>v0.4.1</span>
+  </footer>
+
+</div>
+</body>
+</html>

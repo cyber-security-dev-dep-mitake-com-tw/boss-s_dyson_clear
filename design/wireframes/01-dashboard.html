@@ -1,0 +1,215 @@
+<!doctype html>
+<!-- SweepDeck wireframe 01 — Dashboard. Values from design/tokens.json. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SweepDeck — Dashboard</title>
+<style>
+:root{
+  --bg-base:#0e141a;--bg-raised:#151c23;--bg-overlay:#1c2731;--bg-inset:#0a0f14;
+  --text-1:#e8eef2;--text-2:#a9b6bf;--text-3:#6d7d88;--on-accent:#08222f;
+  --accent:#5fb0dd;--accent-hover:#7ec4e8;--accent-subtle:rgba(95,176,221,.14);
+  --success:#33b374;--success-subtle:rgba(51,179,116,.14);
+  --warning:#d9a514;--warning-subtle:rgba(217,165,20,.14);
+  --danger:#e05252;--danger-subtle:rgba(224,82,82,.14);
+  --info:#4d9fd6;
+  --conf-high:#33b374;--conf-med:#d9a514;--conf-low:#e07856;
+  --c1:#3d8fe0;--c2:#d95926;--c3:#199e70;--c4:#c98500;--c5:#d55181;--c6:#008300;--c7:#9085e9;--c8:#e66767;
+  --track:rgba(255,255,255,.07);--free:rgba(255,255,255,.10);
+  --border:rgba(255,255,255,.08);--border-strong:rgba(255,255,255,.16);
+  --focus:#7ec4e8;
+  --r-sm:4px;--r-md:6px;--r-lg:10px;--r-xl:14px;
+  --sh-lg:0 12px 32px rgba(0,0,0,.5),0 2px 8px rgba(0,0,0,.35);
+  --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font:13px/1.45 system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--bg-base);color:var(--text-1)}
+.app{display:grid;grid-template-columns:216px 1fr;grid-template-rows:1fr auto;height:100vh}
+.sidebar{background:var(--bg-inset);border-right:1px solid var(--border);padding:16px 8px;display:flex;flex-direction:column;gap:2px}
+.brand{display:flex;align-items:center;gap:8px;padding:4px 10px 14px;font-size:15px;font-weight:600}
+.brand .logo{width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 50% 45%,#cfe6f0 0 34%,#7ec4e8 40%,#29465a 62%,#14242e 100%)}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav a{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:var(--r-md);color:var(--text-2);text-decoration:none;font-weight:500}
+.nav a .ic{width:18px;text-align:center;color:var(--text-3)}
+.nav a:hover{background:rgba(255,255,255,.04);color:var(--text-1)}
+.nav a.active{background:var(--accent-subtle);color:var(--accent-hover)}
+.nav a.active .ic{color:var(--accent)}
+.nav a:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+.main{display:flex;flex-direction:column;overflow:hidden}
+.content{flex:1;overflow:auto;padding:24px}
+.statusbar{grid-column:1/-1;display:flex;align-items:center;gap:16px;height:28px;padding:0 12px;background:var(--bg-inset);border-top:1px solid var(--border);font-size:11px;color:var(--text-3)}
+.statusbar .dot{width:7px;height:7px;border-radius:50%;background:var(--success)}
+.statusbar .grow{flex:1}
+h1{font-size:18px;font-weight:600}
+.card{background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--r-lg)}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:var(--r-md);border:1px solid var(--border-strong);background:transparent;color:var(--text-1);font:inherit;font-weight:600;cursor:pointer}
+.btn:hover{background:rgba(255,255,255,.05)}
+.btn:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.btn.primary{background:var(--accent);border-color:transparent;color:var(--on-accent)}
+.btn.primary:hover{background:var(--accent-hover)}
+.btn.sm{padding:4px 10px;font-size:12px;font-weight:500}
+.muted{color:var(--text-3)}.sec{color:var(--text-2)}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:var(--mono);font-size:12px}
+/* dashboard */
+.pagehead{display:flex;align-items:center;gap:16px;margin-bottom:20px}
+.pagehead .grow{flex:1}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.vol{display:flex;gap:20px;padding:18px;align-items:center}
+.donut-wrap{position:relative;width:120px;height:120px;flex:none}
+.donut{width:120px;height:120px;border-radius:50%;
+  -webkit-mask:radial-gradient(farthest-side,transparent 62%,#000 63%);mask:radial-gradient(farthest-side,transparent 62%,#000 63%)}
+.donut.d1{background:conic-gradient(var(--c1) 0 38%,var(--c2) 38% 55%,var(--c3) 55% 66%,var(--c4) 66% 72%,var(--free) 72% 100%)}
+.donut.d2{background:conic-gradient(var(--c1) 0 22%,var(--c3) 22% 30%,var(--free) 30% 100%)}
+.donut-center{position:absolute;inset:0;display:grid;place-items:center;text-align:center}
+.donut-center b{font-size:18px;display:block}
+.legend{display:flex;flex-direction:column;gap:5px;font-size:12px;flex:1}
+.legend .row{display:flex;align-items:center;gap:8px}
+.legend .sw{width:9px;height:9px;border-radius:3px;flex:none}
+.legend .grow{flex:1}
+.insights{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px}
+.insight{padding:16px;display:flex;flex-direction:column;gap:8px}
+.insight .tag{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-3);font-weight:600}
+.insight b{font-size:15px;font-weight:600}
+.insight .link{color:var(--accent);text-decoration:none;font-weight:600;font-size:12px}
+.insight .link:hover{color:var(--accent-hover);text-decoration:underline}
+.sect{margin-top:28px}
+.sect h2{font-size:15px;font-weight:600;margin-bottom:10px}
+table{width:100%;border-collapse:collapse}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);text-align:left;padding:8px 14px;border-bottom:1px solid var(--border-strong);font-weight:600}
+td{padding:8px 14px;border-bottom:1px solid var(--border)}
+tr:last-child td{border-bottom:0}
+tr:hover td{background:rgba(255,255,255,.025)}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600}
+.pill.ok{background:var(--success-subtle);color:#7fe0af}
+.pill.undone{background:var(--track);color:var(--text-2)}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="brand"><span class="logo"></span>SweepDeck</div>
+    <nav class="nav" aria-label="Primary">
+      <a class="active" href="01-dashboard.html" aria-current="page"><span class="ic">&#8962;</span>Dashboard</a>
+      <a href="02-smart-clean.html"><span class="ic">&#10022;</span>Smart Clean</a>
+      <a href="03-uninstaller.html"><span class="ic">&#8862;</span>Uninstaller</a>
+      <a href="04-large-files.html"><span class="ic">&#9636;</span>Large Files</a>
+      <a href="05-duplicates.html"><span class="ic">&#10697;</span>Duplicates</a>
+      <a href="06-disk-status.html"><span class="ic">&#9684;</span>Disk Status</a>
+      <a href="07-processes.html"><span class="ic">&#8801;</span>Processes</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <div class="content">
+
+      <div class="pagehead">
+        <div>
+          <h1>Dashboard</h1>
+          <span class="sec">Macintosh HD scanned 26 minutes ago</span>
+        </div>
+        <div class="grow"></div>
+        <button class="btn primary">&#10022; Quick Scan</button>
+      </div>
+
+      <!-- Volume donuts -->
+      <div class="grid">
+        <div class="card vol">
+          <div class="donut-wrap">
+            <div class="donut d1" role="img" aria-label="Macintosh HD: 361 of 500 GB used"></div>
+            <div class="donut-center"><span><b class="num">72%</b><span class="muted" style="font-size:11px">used</span></span></div>
+          </div>
+          <div class="legend">
+            <div style="font-weight:600;margin-bottom:2px">Macintosh HD <span class="muted num">&middot; 361 / 500 GB</span></div>
+            <div class="row"><span class="sw" style="background:var(--c1)"></span>Apps &amp; system<span class="grow"></span><span class="num sec">190 GB</span></div>
+            <div class="row"><span class="sw" style="background:var(--c2)"></span>Documents<span class="grow"></span><span class="num sec">85 GB</span></div>
+            <div class="row"><span class="sw" style="background:var(--c3)"></span>Caches &amp; logs<span class="grow"></span><span class="num sec">55 GB</span></div>
+            <div class="row"><span class="sw" style="background:var(--c4)"></span>Other<span class="grow"></span><span class="num sec">31 GB</span></div>
+            <div class="row"><span class="sw" style="background:var(--free)"></span>Free<span class="grow"></span><span class="num sec">139 GB</span></div>
+          </div>
+        </div>
+
+        <div class="card vol">
+          <div class="donut-wrap">
+            <div class="donut d2" role="img" aria-label="Backup T7: 600 of 2000 GB used"></div>
+            <div class="donut-center"><span><b class="num">30%</b><span class="muted" style="font-size:11px">used</span></span></div>
+          </div>
+          <div class="legend">
+            <div style="font-weight:600;margin-bottom:2px">Backup T7 <span class="muted num">&middot; 0.6 / 2.0 TB</span></div>
+            <div class="row"><span class="sw" style="background:var(--c1)"></span>Time Machine<span class="grow"></span><span class="num sec">440 GB</span></div>
+            <div class="row"><span class="sw" style="background:var(--c3)"></span>Media<span class="grow"></span><span class="num sec">160 GB</span></div>
+            <div class="row"><span class="sw" style="background:var(--free)"></span>Free<span class="grow"></span><span class="num sec">1.4 TB</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Graph-insight cards (queryId: top-space-owners / app-cache-aggregation / orphaned-files) -->
+      <div class="insights">
+        <div class="card insight">
+          <span class="tag">Cache aggregation</span>
+          <b>Chrome owns 4.2 GB of cache across 3 locations</b>
+          <span class="sec">~/Library/Caches, Application Support/&hellip;/Cache, GPUCache</span>
+          <a class="link" href="02-smart-clean.html">Review in Smart Clean &rarr;</a>
+        </div>
+        <div class="card insight">
+          <span class="tag">Top space owner</span>
+          <b>Xcode owns 38.4 GB in 5 locations</b>
+          <span class="sec">DerivedData alone is 21.7 GB and 100% regenerable</span>
+          <a class="link" href="04-large-files.html">See large files &rarr;</a>
+        </div>
+        <div class="card insight">
+          <span class="tag">Orphaned files</span>
+          <b>612 MB left behind by 4 uninstalled apps</b>
+          <span class="sec">Owned-by edges point to apps that no longer exist</span>
+          <a class="link" href="03-uninstaller.html">Open Uninstaller &rarr;</a>
+        </div>
+      </div>
+
+      <!-- Recent receipts -->
+      <div class="sect">
+        <h2>Recent receipts</h2>
+        <div class="card">
+          <table>
+            <thead><tr><th>When</th><th>Action</th><th>Detail</th><th style="text-align:right">Freed</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              <tr>
+                <td class="num sec">Today 14:32</td><td>Smart Clean</td>
+                <td class="sec">142 items moved to Trash <span class="mono muted">run 8f2c</span></td>
+                <td class="num" style="text-align:right">2.4 GB</td>
+                <td><span class="pill ok">&#10003; ok</span></td>
+                <td style="text-align:right"><button class="btn sm">Undo</button></td>
+              </tr>
+              <tr>
+                <td class="num sec">Today 11:05</td><td>Uninstall</td>
+                <td class="sec">OldTool.app + 6 support paths</td>
+                <td class="num" style="text-align:right">1.9 GB</td>
+                <td><span class="pill ok">&#10003; ok</span></td>
+                <td style="text-align:right"><button class="btn sm">Undo</button></td>
+              </tr>
+              <tr>
+                <td class="num sec">Yesterday</td><td>Duplicates</td>
+                <td class="sec">37 copies removed (canonicals kept)</td>
+                <td class="num" style="text-align:right">3.1 GB</td>
+                <td><span class="pill undone">undone</span></td>
+                <td style="text-align:right"><button class="btn sm" disabled style="opacity:.4">Undo</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="muted" style="margin-top:8px;font-size:12px">Every receipt keeps its Trash reference until you empty the Trash &mdash; Undo restores files to their original path.</p>
+      </div>
+
+    </div>
+  </main>
+
+  <footer class="statusbar">
+    <span class="dot" aria-hidden="true"></span><span>Engine ready</span>
+    <span class="num">Graph: 1.2M nodes &middot; 3.4M edges &middot; DB 84 MB</span>
+    <span class="grow"></span>
+    <span>Last scan 14:32</span><span>12 receipts</span><span>v0.4.1</span>
+  </footer>
+
+</div>
+</body>
+</html>

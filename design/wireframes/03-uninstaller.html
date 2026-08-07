@@ -1,0 +1,189 @@
+<!doctype html>
+<!-- SweepDeck wireframe 03 — Uninstaller. App list + graph-traversal removal preview.
+     Same approval-gate pattern as 02 (summary bar → confirm modal → receipt toast). -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SweepDeck — Uninstaller</title>
+<style>
+:root{
+  --bg-base:#0e141a;--bg-raised:#151c23;--bg-overlay:#1c2731;--bg-inset:#0a0f14;
+  --text-1:#e8eef2;--text-2:#a9b6bf;--text-3:#6d7d88;--on-accent:#08222f;
+  --accent:#5fb0dd;--accent-hover:#7ec4e8;--accent-subtle:rgba(95,176,221,.14);
+  --success:#33b374;--success-subtle:rgba(51,179,116,.14);
+  --warning:#d9a514;--warning-subtle:rgba(217,165,20,.14);
+  --danger:#e05252;--danger-subtle:rgba(224,82,82,.14);
+  --conf-high:#33b374;--conf-med:#d9a514;--conf-low:#e07856;
+  --track:rgba(255,255,255,.07);
+  --border:rgba(255,255,255,.08);--border-strong:rgba(255,255,255,.16);
+  --focus:#7ec4e8;
+  --r-sm:4px;--r-md:6px;--r-lg:10px;--r-xl:14px;
+  --sh-lg:0 12px 32px rgba(0,0,0,.5),0 2px 8px rgba(0,0,0,.35);
+  --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font:13px/1.45 system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--bg-base);color:var(--text-1)}
+.app{display:grid;grid-template-columns:216px 1fr;grid-template-rows:1fr auto;height:100vh}
+.sidebar{background:var(--bg-inset);border-right:1px solid var(--border);padding:16px 8px;display:flex;flex-direction:column;gap:2px}
+.brand{display:flex;align-items:center;gap:8px;padding:4px 10px 14px;font-size:15px;font-weight:600}
+.brand .logo{width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 50% 45%,#cfe6f0 0 34%,#7ec4e8 40%,#29465a 62%,#14242e 100%)}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav a{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:var(--r-md);color:var(--text-2);text-decoration:none;font-weight:500}
+.nav a .ic{width:18px;text-align:center;color:var(--text-3)}
+.nav a:hover{background:rgba(255,255,255,.04);color:var(--text-1)}
+.nav a.active{background:var(--accent-subtle);color:var(--accent-hover)}
+.nav a.active .ic{color:var(--accent)}
+.main{display:flex;flex-direction:column;overflow:hidden}
+.content{flex:1;overflow:auto;padding:24px}
+.statusbar{grid-column:1/-1;display:flex;align-items:center;gap:16px;height:28px;padding:0 12px;background:var(--bg-inset);border-top:1px solid var(--border);font-size:11px;color:var(--text-3)}
+.statusbar .dot{width:7px;height:7px;border-radius:50%;background:var(--success)}
+.statusbar .grow{flex:1}
+h1{font-size:18px;font-weight:600}
+.card{background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--r-lg)}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:var(--r-md);border:1px solid var(--border-strong);background:transparent;color:var(--text-1);font:inherit;font-weight:600;cursor:pointer}
+.btn:hover{background:rgba(255,255,255,.05)}
+.btn:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.btn.primary{background:var(--accent);border-color:transparent;color:var(--on-accent)}
+.btn.primary:hover{background:var(--accent-hover)}
+.btn.danger{background:var(--danger);border-color:transparent;color:#fff}
+.btn.sm{padding:4px 10px;font-size:12px;font-weight:500}
+.muted{color:var(--text-3)}.sec{color:var(--text-2)}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:var(--mono);font-size:12px}
+input[type=checkbox]{accent-color:var(--accent);width:15px;height:15px}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600}
+.badge .bdot{width:6px;height:6px;border-radius:50%}
+.conf-high{background:var(--success-subtle);color:#7fe0af}.conf-high .bdot{background:var(--conf-high)}
+.conf-med{background:var(--warning-subtle);color:#eecb6b}.conf-med .bdot{background:var(--conf-med)}
+.anno{margin:26px 0 10px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);font-weight:700}
+/* two-pane */
+.panes{display:grid;grid-template-columns:340px 1fr;gap:16px;margin-top:16px;align-items:start}
+.search{width:100%;padding:7px 12px;border-radius:var(--r-md);border:1px solid var(--border-strong);background:var(--bg-inset);color:var(--text-1);font:inherit;margin-bottom:2px}
+.search::placeholder{color:var(--text-3)}
+.applist{overflow:hidden}
+.appline{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--border);cursor:pointer}
+.appline:last-child{border-bottom:0}
+.appline:hover{background:rgba(255,255,255,.03)}
+.appline.sel{background:var(--accent-subtle);box-shadow:inset 2px 0 0 var(--accent)}
+.aicon{width:26px;height:26px;border-radius:7px;background:var(--track);display:grid;place-items:center;font-size:12px;color:var(--text-2);flex:none}
+.appline .grow{flex:1;min-width:0}
+.appline small{display:block;color:var(--text-3)}
+/* removal tree */
+.tree{font-family:var(--mono);font-size:12px;padding:14px 16px;line-height:1.9}
+.tree .tw{color:var(--text-3)}
+.tree label{display:inline-flex;align-items:center;gap:8px}
+.tree .sz{color:var(--text-3)}
+.edge{color:var(--accent);font-size:10px;border:1px solid rgba(95,176,221,.35);border-radius:4px;padding:0 5px;margin-left:8px;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;font-weight:600;letter-spacing:.04em}
+.approve-bar{position:sticky;bottom:0;margin-top:20px;display:flex;align-items:center;gap:16px;padding:12px 16px;background:var(--bg-overlay);border:1px solid var(--border-strong);border-radius:var(--r-lg);box-shadow:var(--sh-lg)}
+.approve-bar .grow{flex:1}
+.flowgrid{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+.modal{background:var(--bg-overlay);border:1px solid var(--border-strong);border-radius:var(--r-xl);box-shadow:var(--sh-lg);padding:20px}
+.modal h3{font-size:15px;margin-bottom:4px}
+.modal ul{list-style:none;margin:12px 0;display:flex;flex-direction:column;gap:8px}
+.modal li{display:flex;gap:10px;color:var(--text-2)}
+.modal li .tick{color:var(--accent);flex:none}
+.modal .actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
+.toast{display:flex;align-items:center;gap:12px;background:var(--bg-overlay);border:1px solid var(--border-strong);border-left:3px solid var(--success);border-radius:var(--r-lg);box-shadow:var(--sh-lg);padding:12px 16px}
+.toast .t-ic{color:var(--success);font-size:16px}
+.toast .grow{flex:1}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="brand"><span class="logo"></span>SweepDeck</div>
+    <nav class="nav" aria-label="Primary">
+      <a href="01-dashboard.html"><span class="ic">&#8962;</span>Dashboard</a>
+      <a href="02-smart-clean.html"><span class="ic">&#10022;</span>Smart Clean</a>
+      <a class="active" href="03-uninstaller.html" aria-current="page"><span class="ic">&#8862;</span>Uninstaller</a>
+      <a href="04-large-files.html"><span class="ic">&#9636;</span>Large Files</a>
+      <a href="05-duplicates.html"><span class="ic">&#10697;</span>Duplicates</a>
+      <a href="06-disk-status.html"><span class="ic">&#9684;</span>Disk Status</a>
+      <a href="07-processes.html"><span class="ic">&#8801;</span>Processes</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <div class="content">
+
+      <h1>Uninstaller</h1>
+      <p class="sec">Removes the app plus everything the graph attributes to it via OWNED_BY / INSTALLS_TO edges.</p>
+
+      <div class="panes">
+        <!-- left: app list -->
+        <div>
+          <input class="search" type="search" placeholder="Search 84 apps&hellip;" aria-label="Search apps">
+          <div class="card applist">
+            <div class="appline"><span class="aicon">Fi</span><span class="grow"><b>Figma</b><small>v124.2 &middot; Figma Inc.</small></span><span class="num sec">612 MB</span></div>
+            <div class="appline sel" aria-selected="true"><span class="aicon">OT</span><span class="grow"><b>OldTool</b><small>v2.1 &middot; unsigned &middot; unused 14 mo</small></span><span class="num sec">1.9 GB</span></div>
+            <div class="appline"><span class="aicon">Sl</span><span class="grow"><b>Slack</b><small>v4.39 &middot; running</small></span><span class="num sec">480 MB</span></div>
+            <div class="appline"><span class="aicon">Xc</span><span class="grow"><b>Xcode</b><small>v16.4 &middot; Apple</small></span><span class="num sec">12.6 GB</span></div>
+            <div class="appline"><span class="aicon">Zo</span><span class="grow"><b>Zoom</b><small>v6.1 &middot; zoom.us</small></span><span class="num sec">390 MB</span></div>
+          </div>
+        </div>
+
+        <!-- right: what will be removed -->
+        <div>
+          <div class="card">
+            <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border)">
+              <span class="aicon" style="width:34px;height:34px;font-size:14px">OT</span>
+              <span style="flex:1"><b style="font-size:15px">OldTool.app</b><br><span class="muted">com.vendor.oldtool &middot; last opened 14 months ago</span></span>
+              <span class="badge conf-high"><span class="bdot"></span>traversal confidence 0.95</span>
+            </div>
+            <div class="tree" role="tree" aria-label="What will be removed">
+              <div><label><input type="checkbox" checked disabled> /Applications/OldTool.app</label> <span class="sz">1.42 GB</span> <span class="edge">BUNDLE</span></div>
+              <div><span class="tw">&#9500;&#9472;</span><label><input type="checkbox" checked> ~/Library/Application Support/OldTool/</label> <span class="sz">310 MB</span> <span class="edge">OWNED_BY</span></div>
+              <div><span class="tw">&#9500;&#9472;</span><label><input type="checkbox" checked> ~/Library/Caches/com.vendor.oldtool/</label> <span class="sz">150 MB</span> <span class="edge">OWNED_BY</span></div>
+              <div><span class="tw">&#9500;&#9472;</span><label><input type="checkbox" checked> ~/Library/Preferences/com.vendor.oldtool.plist</label> <span class="sz">12 KB</span> <span class="edge">OWNED_BY</span></div>
+              <div><span class="tw">&#9500;&#9472;</span><label><input type="checkbox" checked> ~/Library/LaunchAgents/com.vendor.oldtool.helper.plist</label> <span class="sz">4 KB</span> <span class="edge">INSTALLS_TO</span></div>
+              <div><span class="tw">&#9492;&#9472;</span><label><input type="checkbox"> ~/Documents/OldTool Projects/</label> <span class="sz">38 MB</span> <span class="edge">OWNED_BY</span> <span class="muted" style="font-family:system-ui;font-size:11px">&mdash; user data, unchecked by default</span></div>
+            </div>
+          </div>
+
+          <!-- APPROVAL GATE: summary bar -->
+          <div class="approve-bar" role="region" aria-label="Approval bar">
+            <span><b class="num">5 paths</b> selected <span class="muted">&middot; user data excluded &middot; app is not running</span></span>
+            <span class="grow"></span>
+            <button class="btn primary">Review &amp; Uninstall 1.88 GB</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="anno">Confirm modal &rarr; receipt toast (same gate pattern as Smart Clean)</div>
+      <div class="flowgrid">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="um-t">
+          <h3 id="um-t">Uninstall OldTool?</h3>
+          <span class="sec">Exactly what will happen:</span>
+          <ul>
+            <li><span class="tick">&#10003;</span>OldTool.app and 4 support paths (1.88 GB) move to Trash</li>
+            <li><span class="tick">&#10003;</span>Launch agent com.vendor.oldtool.helper is unloaded first</li>
+            <li><span class="tick">&#10003;</span>~/Documents/OldTool Projects is kept (you left it unchecked)</li>
+            <li><span class="tick">&#10003;</span>Receipt with per-path Undo is written; restore puts every file back</li>
+          </ul>
+          <div class="actions">
+            <button class="btn">Cancel</button>
+            <button class="btn danger">Uninstall</button>
+          </div>
+        </div>
+        <div class="toast" role="status">
+          <span class="t-ic">&#10003;</span>
+          <span><b>OldTool uninstalled &mdash; 1.88 GB freed</b><br><span class="sec">5 paths moved to Trash &middot; receipt #342</span></span>
+          <span class="grow"></span>
+          <button class="btn sm">Undo</button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <footer class="statusbar">
+    <span class="dot" aria-hidden="true"></span><span>Engine ready</span>
+    <span class="num">84 apps indexed &middot; 612 MB orphaned files detected</span>
+    <span class="grow"></span>
+    <span>v0.4.1</span>
+  </footer>
+
+</div>
+</body>
+</html>

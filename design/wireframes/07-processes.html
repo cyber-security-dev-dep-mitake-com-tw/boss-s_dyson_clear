@@ -1,0 +1,260 @@
+<!doctype html>
+<!-- SweepDeck wireframe 07 — Processes. Sortable table, unnecessary-score column
+     with reason tooltip, per-row kill (gated by the same confirm-modal pattern),
+     startup-items section. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SweepDeck — Processes</title>
+<style>
+:root{
+  --bg-base:#0e141a;--bg-raised:#151c23;--bg-overlay:#1c2731;--bg-inset:#0a0f14;
+  --text-1:#e8eef2;--text-2:#a9b6bf;--text-3:#6d7d88;--on-accent:#08222f;
+  --accent:#5fb0dd;--accent-hover:#7ec4e8;--accent-subtle:rgba(95,176,221,.14);
+  --success:#33b374;--success-subtle:rgba(51,179,116,.14);
+  --warning:#d9a514;--warning-subtle:rgba(217,165,20,.14);
+  --danger:#e05252;--danger-subtle:rgba(224,82,82,.14);
+  --conf-high:#33b374;--conf-med:#d9a514;--conf-low:#e07856;
+  --track:rgba(255,255,255,.07);
+  --border:rgba(255,255,255,.08);--border-strong:rgba(255,255,255,.16);
+  --focus:#7ec4e8;
+  --r-sm:4px;--r-md:6px;--r-lg:10px;--r-xl:14px;
+  --sh-lg:0 12px 32px rgba(0,0,0,.5),0 2px 8px rgba(0,0,0,.35);
+  --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font:13px/1.45 system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--bg-base);color:var(--text-1)}
+.app{display:grid;grid-template-columns:216px 1fr;grid-template-rows:1fr auto;height:100vh}
+.sidebar{background:var(--bg-inset);border-right:1px solid var(--border);padding:16px 8px;display:flex;flex-direction:column;gap:2px}
+.brand{display:flex;align-items:center;gap:8px;padding:4px 10px 14px;font-size:15px;font-weight:600}
+.brand .logo{width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 50% 45%,#cfe6f0 0 34%,#7ec4e8 40%,#29465a 62%,#14242e 100%)}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav a{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:var(--r-md);color:var(--text-2);text-decoration:none;font-weight:500}
+.nav a .ic{width:18px;text-align:center;color:var(--text-3)}
+.nav a:hover{background:rgba(255,255,255,.04);color:var(--text-1)}
+.nav a.active{background:var(--accent-subtle);color:var(--accent-hover)}
+.nav a.active .ic{color:var(--accent)}
+.main{display:flex;flex-direction:column;overflow:hidden}
+.content{flex:1;overflow:auto;padding:24px}
+.statusbar{grid-column:1/-1;display:flex;align-items:center;gap:16px;height:28px;padding:0 12px;background:var(--bg-inset);border-top:1px solid var(--border);font-size:11px;color:var(--text-3)}
+.statusbar .dot{width:7px;height:7px;border-radius:50%;background:var(--success)}
+.statusbar .grow{flex:1}
+h1{font-size:18px;font-weight:600}
+.card{background:var(--bg-raised);border:1px solid var(--border);border-radius:var(--r-lg)}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:var(--r-md);border:1px solid var(--border-strong);background:transparent;color:var(--text-1);font:inherit;font-weight:600;cursor:pointer}
+.btn:hover{background:rgba(255,255,255,.05)}
+.btn:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.btn.primary{background:var(--accent);border-color:transparent;color:var(--on-accent)}
+.btn.danger{background:var(--danger);border-color:transparent;color:#fff}
+.btn.danger-ghost{color:#f3928f;border-color:rgba(224,82,82,.45)}
+.btn.danger-ghost:hover{background:var(--danger-subtle)}
+.btn.sm{padding:3px 10px;font-size:12px;font-weight:500}
+.muted{color:var(--text-3)}.sec{color:var(--text-2)}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:var(--mono);font-size:12px}
+.anno{margin:26px 0 10px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);text-align:left;padding:8px 12px;border-bottom:1px solid var(--border-strong);font-weight:600;cursor:pointer;white-space:nowrap}
+th.sorted{color:var(--accent)}
+th:hover{color:var(--text-1)}
+td{padding:7px 12px;border-bottom:1px solid var(--border)}
+tr:hover td{background:rgba(255,255,255,.025)}
+.sys td{opacity:.55}
+/* unnecessary score */
+.score{display:inline-flex;align-items:center;gap:8px}
+.sbar{width:64px;height:6px;border-radius:999px;background:var(--track);overflow:hidden}
+.sbar>i{display:block;height:100%;border-radius:999px}
+.tip{position:relative;display:inline-flex;align-items:center;gap:6px;cursor:help;border-bottom:1px dotted var(--text-3)}
+.tip .bubble{visibility:hidden;position:absolute;bottom:130%;left:0;z-index:5;width:250px;background:var(--bg-overlay);border:1px solid var(--border-strong);border-radius:8px;box-shadow:var(--sh-lg);padding:10px 12px;font-size:12px;color:var(--text-2)}
+.tip:hover .bubble,.tip:focus-within .bubble{visibility:visible}
+.bubble b{color:var(--text-1);display:block;margin-bottom:4px}
+.bubble ul{margin:4px 0 0 16px}
+.bubble .prov{margin-top:6px;font-family:var(--mono);font-size:10px;color:var(--text-3)}
+/* startup */
+.sect{margin-top:28px}
+.sect h2{font-size:15px;font-weight:600;margin-bottom:10px}
+.sitem{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--border)}
+.sitem:last-child{border-bottom:0}
+.sitem .grow{flex:1}
+.switch{width:34px;height:19px;border-radius:999px;background:var(--accent);position:relative;flex:none;cursor:pointer;border:0}
+.switch::after{content:"";position:absolute;top:2px;right:2px;width:15px;height:15px;border-radius:50%;background:#fff}
+.switch.off{background:var(--track)}
+.switch.off::after{right:auto;left:2px;background:var(--text-3)}
+.switch:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.flowgrid{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+.modal{background:var(--bg-overlay);border:1px solid var(--border-strong);border-radius:var(--r-xl);box-shadow:var(--sh-lg);padding:20px}
+.modal h3{font-size:15px;margin-bottom:4px}
+.modal ul{list-style:none;margin:12px 0;display:flex;flex-direction:column;gap:8px}
+.modal li{display:flex;gap:10px;color:var(--text-2)}
+.modal li .tick{color:var(--accent);flex:none}
+.modal .actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
+.toast{display:flex;align-items:center;gap:12px;background:var(--bg-overlay);border:1px solid var(--border-strong);border-left:3px solid var(--success);border-radius:var(--r-lg);box-shadow:var(--sh-lg);padding:12px 16px}
+.toast .t-ic{color:var(--success);font-size:16px}
+.toast .grow{flex:1}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="brand"><span class="logo"></span>SweepDeck</div>
+    <nav class="nav" aria-label="Primary">
+      <a href="01-dashboard.html"><span class="ic">&#8962;</span>Dashboard</a>
+      <a href="02-smart-clean.html"><span class="ic">&#10022;</span>Smart Clean</a>
+      <a href="03-uninstaller.html"><span class="ic">&#8862;</span>Uninstaller</a>
+      <a href="04-large-files.html"><span class="ic">&#9636;</span>Large Files</a>
+      <a href="05-duplicates.html"><span class="ic">&#10697;</span>Duplicates</a>
+      <a href="06-disk-status.html"><span class="ic">&#9684;</span>Disk Status</a>
+      <a class="active" href="07-processes.html" aria-current="page"><span class="ic">&#8801;</span>Processes</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <div class="content">
+
+      <h1>Processes</h1>
+      <p class="sec">312 processes &middot; refreshed every 3 s. System processes are dimmed and cannot be killed from here.</p>
+
+      <div class="card" style="overflow:visible;margin-top:16px">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>PID</th>
+              <th>CPU %</th>
+              <th>Memory</th>
+              <th class="sorted">Unnecessary &darr;</th>
+              <th>User</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>HelperUpdaterAgent</b><br><span class="mono muted">~/Library/&hellip;/HelperUpdaterAgent</span></td>
+              <td class="num sec">4821</td>
+              <td class="num">0.1</td>
+              <td class="num">412 MB</td>
+              <td>
+                <span class="score">
+                  <span class="sbar"><i style="width:86%;background:var(--conf-low)"></i></span>
+                  <span class="tip" tabindex="0">0.86
+                    <span class="bubble" role="tooltip">
+                      <b>Why 0.86 unnecessary?</b>
+                      <ul>
+                        <li>login item for an app unused 14 mo</li>
+                        <li>high memory for an idle agent</li>
+                        <li>not an OS process</li>
+                      </ul>
+                      <span class="prov">proc-analyzer@1 &middot; rule login-item.stale &middot; 14:31</span>
+                    </span>
+                  </span>
+                </span>
+              </td>
+              <td class="sec">dennis</td>
+              <td style="text-align:right"><button class="btn sm danger-ghost">Kill&hellip;</button></td>
+            </tr>
+            <tr>
+              <td><b>Chrome Helper (GPU)</b></td>
+              <td class="num sec">1204</td>
+              <td class="num">11.2</td>
+              <td class="num">1.1 GB</td>
+              <td>
+                <span class="score">
+                  <span class="sbar"><i style="width:34%;background:var(--conf-med)"></i></span>
+                  <span class="tip" tabindex="0">0.34
+                    <span class="bubble" role="tooltip">
+                      <b>Why 0.34?</b>
+                      <ul><li>high memory</li><li>but parent app is active</li></ul>
+                      <span class="prov">proc-analyzer@1 &middot; rule helper.active-parent</span>
+                    </span>
+                  </span>
+                </span>
+              </td>
+              <td class="sec">dennis</td>
+              <td style="text-align:right"><button class="btn sm danger-ghost">Kill&hellip;</button></td>
+            </tr>
+            <tr>
+              <td><b>node (vite dev)</b></td>
+              <td class="num sec">7742</td>
+              <td class="num">24.6</td>
+              <td class="num">680 MB</td>
+              <td>
+                <span class="score">
+                  <span class="sbar"><i style="width:12%;background:var(--conf-high)"></i></span>
+                  <span class="sec">0.12</span>
+                </span>
+              </td>
+              <td class="sec">dennis</td>
+              <td style="text-align:right"><button class="btn sm danger-ghost">Kill&hellip;</button></td>
+            </tr>
+            <tr class="sys">
+              <td><b>kernel_task</b></td>
+              <td class="num sec">1</td>
+              <td class="num">3.1</td>
+              <td class="num">2.4 GB</td>
+              <td><span class="muted">&mdash; system</span></td>
+              <td class="sec">root</td>
+              <td style="text-align:right"><button class="btn sm" disabled title="System process — protected">Kill</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="sect">
+        <h2>Startup items <span class="muted" style="font-weight:400;font-size:12px">&mdash; toggling off is reversible and takes effect at next login</span></h2>
+        <div class="card">
+          <div class="sitem">
+            <span class="grow"><b>HelperUpdaterAgent</b><br><span class="muted mono">com.vendor.helper.plist &middot; LaunchAgent</span></span>
+            <span class="sec" style="color:#f0a184">flagged: app unused 14 mo</span>
+            <button class="switch" role="switch" aria-checked="true" aria-label="HelperUpdaterAgent enabled"></button>
+          </div>
+          <div class="sitem">
+            <span class="grow"><b>Slack</b><br><span class="muted mono">login item</span></span>
+            <span class="muted">used daily</span>
+            <button class="switch" role="switch" aria-checked="true" aria-label="Slack enabled"></button>
+          </div>
+          <div class="sitem">
+            <span class="grow"><b>ZoomOpener</b><br><span class="muted mono">com.zoom.opener.plist &middot; LaunchAgent</span></span>
+            <span class="muted">disabled last week</span>
+            <button class="switch off" role="switch" aria-checked="false" aria-label="ZoomOpener disabled"></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="anno">Kill confirm (same gate pattern &mdash; per-row, since kill is instant) &rarr; receipt toast</div>
+      <div class="flowgrid">
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="pm-t">
+          <h3 id="pm-t">Kill HelperUpdaterAgent (pid 4821)?</h3>
+          <span class="sec">Exactly what will happen:</span>
+          <ul>
+            <li><span class="tick">&#10003;</span>SIGTERM sent first; SIGKILL only if it ignores it for 5 s</li>
+            <li><span class="tick">&#10003;</span>Frees ~412 MB of memory now</li>
+            <li><span class="tick">&#10003;</span>It is a login item, so it returns at next login &mdash; disable it in Startup items below to stop that</li>
+            <li><span class="tick">&#10003;</span>Kill is logged to receipt #346 (kills cannot be undone, only logged)</li>
+          </ul>
+          <div class="actions">
+            <button class="btn">Cancel</button>
+            <button class="btn danger">Kill process</button>
+          </div>
+        </div>
+        <div class="toast" role="status">
+          <span class="t-ic">&#10003;</span>
+          <span><b>HelperUpdaterAgent terminated</b><br><span class="sec">412 MB freed &middot; logged to receipt #346</span></span>
+          <span class="grow"></span>
+          <button class="btn sm">Disable at startup</button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <footer class="statusbar">
+    <span class="dot" aria-hidden="true"></span><span>Engine ready</span>
+    <span class="num">312 processes &middot; CPU 18% &middot; mem 21.4 / 32 GB</span>
+    <span class="grow"></span>
+    <span>v0.4.1</span>
+  </footer>
+
+</div>
+</body>
+</html>
