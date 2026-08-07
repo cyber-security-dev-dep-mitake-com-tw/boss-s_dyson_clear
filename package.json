@@ -15,7 +15,7 @@
     "build:app": "npm run build -w packages/app",
     "dev": "npm run dev -w packages/app",
     "test": "npm run test -w packages/core && npm run test -w packages/app --if-present",
-    "lint": "eslint packages/*/src --ext .ts,.tsx",
+    "lint": "eslint \"packages/*/src/**/*.{ts,tsx}\"",
     "typecheck": "npm run typecheck -w packages/core && npm run typecheck -w packages/app",
     "icons": "node scripts/make-icons.mjs",
     "fixtures": "node scripts/make-fixtures.mjs",
