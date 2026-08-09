@@ -36,3 +36,17 @@ npm run dist         # package installers locally
 ```
 
 Releases: push a `v*` tag; GitHub Actions builds and signs (self-signed) all four installers. See `docs/SIGNING.md` to switch to real certificates.
+
+## quick start
+### 1. move app into application folder
+### 2. eject the dmg/pkg virtual disk
+
+```bash
+sudo xattr -cr /Applications/SweepDeck.app
+
+sudo codesign --force --deep --sign - /Applications/SweepDeck.app
+
+sudo xattr -d com.apple.quarantine /Applications/SweepDeck.app
+```
+
+then reopen the app
