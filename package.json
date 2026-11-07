@@ -27,7 +27,12 @@
     "eslint": "^8.57.0",
     "png2icons": "^2.0.1",
     "prettier": "^3.3.0",
-    "sharp": "^0.33.0",
+    "sharp": "^0.35.5",
     "typescript": "^5.6.0"
+  },
+  "overrides": {
+    "brace-expansion": "^5.0.12",
+    "js-yaml": "^4.3.2",
+    "minimatch": "^11.0.1"
   }
 }
