@@ -22,19 +22,20 @@ export {
   execPlan,
   ApprovalRequiredError,
   ALL_CATEGORIES,
+  describeExecError,
   type RunScanOptions,
   type ExecPlanOptions,
 } from './run.js';
 
 // Scanners (direct feature APIs)
-export { scanJunk } from './scanners/junk.js';
+export { scanJunk, isMacProtectedCache, overlapsSpecificLocation } from './scanners/junk.js';
 export { scanLargeFiles, DEFAULT_LARGE_THRESHOLD } from './scanners/largefiles.js';
 export { scanDuplicates, pickCanonical } from './scanners/duplicates.js';
 export { scanApps, parseRegUninstallOutput } from './scanners/apps.js';
 export { scanProcesses, listProcesses, getLoginItems } from './scanners/processes.js';
-export { scanDisk, getDiskStatus } from './scanners/disk.js';
+export { scanDisk, getDiskStatus, collapseApfsVolumes, parseDiskutilPlist, getBootContainerInfo, getRawDiskInputs, type FsRow, type ApfsContainerInfo } from './scanners/disk.js';
 export type { ScanContext, Candidate, ScannerResult, Scanner } from './scanners/types.js';
-export { walk, treeSize, type WalkEntry, type WalkOptions } from './scanners/walk.js';
+export { walk, treeSize, allocatedSize, type WalkEntry, type WalkOptions } from './scanners/walk.js';
 
 // Verifier
 export { verify, type VerifiedCandidate, type VerifyOptions } from './verifier/verifier.js';

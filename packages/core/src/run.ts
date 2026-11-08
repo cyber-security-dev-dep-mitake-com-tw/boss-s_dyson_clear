@@ -189,7 +189,11 @@ export async function execPlan(opts: ExecPlanOptions): Promise<ExecResult> {
   });
 
   const approved = new Set(opts.approveIds);
-  const targets = plan.verdicts.filter((v) => approved.has(v.id) && v.status === 'proposed');
+  // advise verdicts are information only — they are never executed, so they
+  // never produce a (failed) receipt even if a client sends their ids.
+  const targets = plan.verdicts.filter(
+    (v) => approved.has(v.id) && v.status === 'proposed' && v.action !== 'advise',
+  );
   const home = os.homedir();
   const quarantineDir =
     opts.quarantineDir ??
@@ -288,7 +292,13 @@ async function executeVerdict(
         });
     }
   } catch (err) {
-    const message = err instanceof ProtectedPathError ? err.message : String(err);
+    const message = describeExecError(err);
+    const code = (err as NodeJS.ErrnoException)?.code;
+    // OS-protected or already-gone targets won't succeed on retry: retire the
+    // verdict so it is not offered again.
+    if (code === 'EPERM' || code === 'EACCES' || code === 'ENOENT' || err instanceof ProtectedPathError) {
+      db.updateVerdictStatus(v.id, 'rejected');
+    }
     return writeReceipt(db, {
       verdictId: v.id,
       action: v.action,
@@ -299,4 +309,19 @@ async function executeVerdict(
       error: message,
     });
   }
+}
+
+/** Human-readable executor errors (receipts are shown verbatim in the UI). */
+export function describeExecError(err: unknown): string {
+  if (err instanceof ProtectedPathError) {
+    if (/cannot resolve/.test(err.message)) return 'already gone — nothing to do';
+    return err.message;
+  }
+  const code = (err as NodeJS.ErrnoException)?.code;
+  if (code === 'EPERM' || code === 'EACCES') {
+    return 'protected by macOS (SIP / Full Disk Access) — skipped, nothing changed';
+  }
+  if (code === 'ENOENT') return 'already gone — nothing to do';
+  if (code === 'EBUSY') return 'in use by another process — skipped, nothing changed';
+  return err instanceof Error ? err.message : String(err);
 }

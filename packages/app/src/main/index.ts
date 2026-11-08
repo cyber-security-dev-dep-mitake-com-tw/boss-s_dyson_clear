@@ -5,19 +5,28 @@ import tokens from '@tokens';
 import { IPC, type WorkflowEvent } from '@contracts';
 import { Engine } from './engine';
 import { registerIpc } from './ipc';
+import { installDebug, type DebugModule } from './debug';
 
 const SMOKE = process.argv.includes('--smoke');
+/** Beta builds only: run the self-test headless, print the result, exit 0/1. */
+const SELFTEST = __SWEEPDECK_BETA__ && process.argv.includes('--selftest');
+let debug: DebugModule | null = null;
 const isDev = !app.isPackaged;
 
 // Single instance lock — focus the existing window instead of opening twice.
-const gotLock = app.requestSingleInstanceLock();
+// The headless self-test runs alongside a normal instance (it opens no UI and
+// scans into a throwaway DB), so it never competes for the lock.
+const gotLock = SELFTEST || app.requestSingleInstanceLock();
 if (!gotLock) {
+  // eslint-disable-next-line no-console
+  console.log('SweepDeck is already running — focusing the existing window.');
   app.quit();
 } else {
   main();
 }
 
 function broadcast(ev: WorkflowEvent): void {
+  if (__SWEEPDECK_BETA__) debug?.onWorkflowEvent(ev);
   for (const win of BrowserWindow.getAllWindows()) {
     if (!win.isDestroyed()) win.webContents.send(IPC.workflowEvent, ev);
   }
@@ -40,11 +49,14 @@ function createWindow(): BrowserWindow {
       nodeIntegration: false,
       sandbox: true,
       preload: join(__dirname, '../preload/index.js'),
-      additionalArguments: [`--sweepdeck-version=${app.getVersion()}`],
+      additionalArguments: [`--sweepdeck-version=${app.getVersion()}`, `--sweepdeck-channel=${__SWEEPDECK_CHANNEL__}`],
     },
   });
 
-  win.once('ready-to-show', () => win.show());
+  if (__SWEEPDECK_BETA__) debug?.attachWindow(win);
+  win.once('ready-to-show', () => {
+    if (!SELFTEST) win.show();
+  });
 
   const rendererUrl = process.env['ELECTRON_RENDERER_URL'];
 
@@ -73,7 +85,12 @@ function createWindow(): BrowserWindow {
 
 function main(): void {
   const engine = new Engine(broadcast);
-  registerIpc(engine);
+  if (__SWEEPDECK_BETA__) {
+    debug = installDebug(engine, __SWEEPDECK_CHANNEL__);
+    registerIpc(engine, { onError: (ch, err) => debug?.onIpcError(ch, err) });
+  } else {
+    registerIpc(engine);
+  }
 
   app.on('second-instance', () => {
     const win = BrowserWindow.getAllWindows()[0];
@@ -84,7 +101,7 @@ function main(): void {
   });
 
   app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin' || SMOKE) app.quit();
+    if (process.platform !== 'darwin' || SMOKE || SELFTEST) app.quit();
   });
 
   app.on('activate', () => {
@@ -93,7 +110,35 @@ function main(): void {
 
   void app.whenReady().then(() => {
     createWindow();
-    if (SMOKE) {
+    if (__SWEEPDECK_BETA__ && SELFTEST && debug) {
+      const dbg = debug;
+      // let the renderer load so its console errors / crashes are captured too
+      setTimeout(() => {
+        void dbg
+          .runSelfTest()
+          .then((report) => {
+            const failed = report.checks.filter((c) => !c.ok);
+            for (const c of report.checks) {
+              // eslint-disable-next-line no-console
+              console.log(`${c.ok ? 'PASS' : 'FAIL'}  ${c.id} — ${c.detail}`);
+            }
+            for (const e of report.errorsLogged) {
+              // eslint-disable-next-line no-console
+              console.log(`ERROR ${e.source} — ${e.message}`);
+            }
+            // eslint-disable-next-line no-console
+            console.log(
+              `SELFTEST ${report.ok ? 'PASS' : 'FAIL'} (${failed.length} failed check(s), ${report.errorsLogged.length} logged error(s)) report: ${report.reportPath}`,
+            );
+            app.exit(report.ok ? 0 : 1);
+          })
+          .catch((err: unknown) => {
+            // eslint-disable-next-line no-console
+            console.log(`SELFTEST CRASH ${String(err)}`);
+            app.exit(2);
+          });
+      }, 4000);
+    } else if (SMOKE) {
       setTimeout(() => {
         // eslint-disable-next-line no-console
         console.log('SMOKE OK');

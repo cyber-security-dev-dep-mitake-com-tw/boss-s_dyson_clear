@@ -32,7 +32,25 @@ const versionArg = process.argv.find((a) => a.startsWith('--sweepdeck-version=')
 const appInfo = {
   version: versionArg ? versionArg.slice('--sweepdeck-version='.length) : '0.0.0',
   platform: process.platform,
+  channel: __SWEEPDECK_CHANNEL__,
 };
 
 contextBridge.exposeInMainWorld('sweepdeck', api);
 contextBridge.exposeInMainWorld('appInfo', appInfo);
+
+// Beta channel only — stripped from production bundles at build time.
+if (__SWEEPDECK_BETA__) {
+  contextBridge.exposeInMainWorld('sweepdeckDebug', {
+    info: () => ipcRenderer.invoke('debug:info'),
+    logs: () => ipcRenderer.invoke('debug:logs'),
+    exportReport: () => ipcRenderer.invoke('debug:export'),
+    selfTest: () => ipcRenderer.invoke('debug:selftest'),
+    onLog: (cb: (entry: unknown) => void) => {
+      const listener = (_e: IpcRendererEvent, entry: unknown): void => cb(entry);
+      ipcRenderer.on('debug:log-event', listener);
+      return () => {
+        ipcRenderer.removeListener('debug:log-event', listener);
+      };
+    },
+  });
+}

@@ -44,7 +44,7 @@ import type {
 
 export type EventSink = (ev: WorkflowEvent) => void;
 
-interface CoreModule {
+export interface CoreModule {
   GraphStore: new (dbPath: string) => GraphStoreT;
   runScan: (opts: RunScanOptions, sink: EventSink) => Promise<ScanSummary>;
   execPlan: (opts: ExecPlanOptions) => Promise<ExecResult>;
@@ -55,6 +55,9 @@ interface CoreModule {
   graphQuery: (db: GraphStoreT, queryId: GraphQueryId, params?: Record<string, unknown>) => GraphInsight;
   undoReceipt: (db: GraphStoreT, receiptId: number) => Promise<{ ok: boolean; error?: string }>;
   writeReceipt: (db: GraphStoreT, r: Omit<Receipt, 'id' | 'executedAt'> & { executedAt?: number }) => Receipt;
+  // used by the beta-only debug module
+  getRawDiskInputs?: () => Promise<{ fsSize: unknown[]; boot: unknown }>;
+  isMacProtectedCache?: (dir: string, name: string) => boolean;
 }
 
 export class Engine {
@@ -90,6 +93,11 @@ export class Engine {
     const core = await this.load();
     if (!this.store) this.store = new core.GraphStore(this.dbPath());
     return this.store;
+  }
+
+  /** Beta debug module only: the loaded core + the live graph store. */
+  async debugHandles(): Promise<{ core: CoreModule; db: GraphStoreT; dbPath: string }> {
+    return { core: await this.load(), db: await this.db(), dbPath: this.dbPath() };
   }
 
   // --- IPC-facing surface -------------------------------------------------

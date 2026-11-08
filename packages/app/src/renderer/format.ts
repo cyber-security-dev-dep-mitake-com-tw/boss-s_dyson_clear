@@ -1,16 +1,25 @@
 import type { Provenance } from '@contracts';
 
-export function fmtBytes(n: number | null | undefined): string {
+/**
+ * macOS (Finder, Disk Utility) reports storage in DECIMAL units — 494 GB, not
+ * 460 "GB" — so match the OS there; Windows Explorer uses binary units.
+ */
+function unitBase(): number {
+  const platform = typeof window !== 'undefined' ? window.appInfo?.platform : undefined;
+  return platform === 'darwin' ? 1000 : 1024;
+}
+
+export function fmtBytes(n: number | null | undefined, base: number = unitBase()): string {
   if (n === null || n === undefined || Number.isNaN(n)) return '—';
   const abs = Math.abs(n);
-  if (abs < 1024) return `${n} B`;
+  if (abs < base) return `${n} B`;
   const units = ['KB', 'MB', 'GB', 'TB'];
   let v = n;
   let u = -1;
   do {
-    v /= 1024;
+    v /= base;
     u += 1;
-  } while (Math.abs(v) >= 1024 && u < units.length - 1);
+  } while (Math.abs(v) >= base && u < units.length - 1);
   return `${v >= 100 ? v.toFixed(0) : v >= 10 ? v.toFixed(1) : v.toFixed(v < 1 ? 2 : 1)} ${units[u]}`;
 }
 

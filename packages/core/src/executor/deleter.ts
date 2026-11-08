@@ -7,7 +7,7 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, realpath, rename, stat, lstat, copyFile, unlink, rm, readdir } from 'node:fs/promises';
 import path from 'node:path';
-import { treeSize } from '../scanners/walk.js';
+import { treeSize, allocatedSize } from '../scanners/walk.js';
 import { checkProtectedPath } from '../verifier/rules.js';
 
 export class ProtectedPathError extends Error {
@@ -80,7 +80,7 @@ export class Deleter {
   async trash(target: string): Promise<TrashResult> {
     const real = await this.assertAllowed(target);
     const st = await lstat(real);
-    const bytes = st.isDirectory() ? await treeSize(real) : st.size;
+    const bytes = st.isDirectory() ? await treeSize(real) : allocatedSize(st);
 
     const tag = `${Date.now()}-${randomUUID().slice(0, 8)}`;
     const destDir = path.join(this.quarantineDir, tag);
@@ -94,6 +94,8 @@ export class Deleter {
         await copyTree(real, dest);
         await rm(real, { recursive: true, force: true });
       } else {
+        // nothing moved — don't leave an empty quarantine slot behind
+        await rm(destDir, { recursive: true, force: true }).catch(() => void 0);
         throw err;
       }
     }

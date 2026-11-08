@@ -17,6 +17,7 @@ import type {
   ScanCategory,
   WorkflowEvent,
 } from '@contracts';
+import { fmtBytes } from './format';
 
 export type ScanStatus = 'idle' | 'scanning' | 'gate' | 'executing' | 'done' | 'error';
 export type FlowKind = 'clean' | 'uninstall' | 'large' | 'duplicate';
@@ -29,7 +30,8 @@ export type ViewId =
   | 'disk-status'
   | 'processes'
   | 'receipts'
-  | 'settings';
+  | 'settings'
+  | 'debug';
 
 export interface PhaseInfo {
   state: 'wait' | 'run' | 'done' | 'failed';
@@ -48,10 +50,15 @@ export interface ToastInfo {
 
 export const PHASE_ORDER = ['scan', 'verify', 'merge', 'gate', 'exec'] as const;
 
+/** Advise verdicts are information only — never selectable, never executed. */
+export function isExecutable(v: { action: string }): boolean {
+  return v.action !== 'advise';
+}
+
 function smartSelection(plan: CleanPlan): Record<number, boolean> {
   const sel: Record<number, boolean> = {};
   for (const v of plan.verdicts) {
-    if (v.smartSelected && v.status === 'proposed') sel[v.id] = true;
+    if (v.smartSelected && v.status === 'proposed' && isExecutable(v)) sel[v.id] = true;
   }
   return sel;
 }
@@ -312,7 +319,7 @@ export const useStore = create<SweepStore>((set, get) => ({
   approveSelected: async () => {
     const { plan, selected } = get();
     if (!plan) return;
-    const verdictIds = plan.verdicts.filter((v) => selected[v.id]).map((v) => v.id);
+    const verdictIds = plan.verdicts.filter((v) => selected[v.id] && isExecutable(v)).map((v) => v.id);
     if (verdictIds.length === 0) return;
     set({ status: 'executing' });
     try {
@@ -434,7 +441,5 @@ export const useStore = create<SweepStore>((set, get) => ({
 }));
 
 function formatGB(bytes: number): string {
-  if (bytes >= 1024 ** 3) return `${(bytes / 1024 ** 3).toFixed(1)} GB`;
-  if (bytes >= 1024 ** 2) return `${(bytes / 1024 ** 2).toFixed(0)} MB`;
-  return `${Math.round(bytes / 1024)} KB`;
+  return fmtBytes(bytes);
 }

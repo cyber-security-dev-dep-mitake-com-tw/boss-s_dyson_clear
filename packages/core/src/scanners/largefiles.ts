@@ -7,7 +7,7 @@
  */
 import os from 'node:os';
 import path from 'node:path';
-import { walk } from './walk.js';
+import { walk, allocatedSize } from './walk.js';
 import { prov } from '../graph/provenance.js';
 import { emptyResult, type ScanContext, type ScannerResult } from './types.js';
 
@@ -29,7 +29,7 @@ export async function scanLargeFiles(ctx: ScanContext): Promise<ScannerResult> {
     if (++progress % 5000 === 0) {
       ctx.emit.emit('scan', 'scanner.large', 'task_progress', { done: progress });
     }
-    const size = entry.stats.size;
+    const size = allocatedSize(entry.stats); // on-disk bytes (sparse-safe)
     if (size < threshold) continue;
 
     const stale = now - entry.stats.atimeMs > STALE_MS;

@@ -58,18 +58,45 @@ export async function* walk(root: string, opts: WalkOptions = {}): AsyncGenerato
   }
 }
 
-/** Recursive size of a tree (symlink-safe, error-tolerant). */
+/**
+ * Bytes a file actually occupies on disk. `st.size` is the APPARENT size, which
+ * hugely over-counts sparse files (VM / Docker disk images report hundreds of
+ * GB while using a few) — that is how ~/Library once showed 471 GB on a 494 GB
+ * disk. `blocks` is undefined on Windows, where we fall back to `size`.
+ */
+export function allocatedSize(st: Pick<Stats, 'size' | 'blocks'>): number {
+  const blocks = (st as { blocks?: number }).blocks;
+  if (typeof blocks === 'number' && Number.isFinite(blocks) && blocks >= 0 && process.platform !== 'win32') {
+    // min(): sparse files allocate far less than their apparent size, while
+    // tiny files round UP to a block — report the smaller, honest number.
+    return Math.min(st.size, blocks * 512);
+  }
+  return st.size;
+}
+
+/**
+ * Recursive on-disk size of a tree (symlink-safe, error-tolerant).
+ * Uses allocated blocks and counts each hard-linked inode once.
+ */
 export async function treeSize(root: string, opts: WalkOptions = {}): Promise<number> {
   let total = 0;
   try {
     const st = await lstat(root);
-    if (st.isFile()) return st.size;
+    if (st.isFile()) return allocatedSize(st);
     if (!st.isDirectory()) return 0;
   } catch {
     return 0;
   }
+  const seen = new Set<string>();
   for await (const entry of walk(root, opts)) {
-    if (entry.dirent === 'file') total += entry.stats.size;
+    if (entry.dirent !== 'file') continue;
+    const st = entry.stats;
+    if (st.nlink > 1) {
+      const id = `${st.dev}:${st.ino}`;
+      if (seen.has(id)) continue;
+      seen.add(id);
+    }
+    total += allocatedSize(st);
   }
   return total;
 }

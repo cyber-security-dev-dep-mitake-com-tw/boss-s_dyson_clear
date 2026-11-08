@@ -45,8 +45,29 @@ function positiveInt(channel: string, v: unknown, field: string): number {
   return v as number;
 }
 
-export function registerIpc(engine: Engine): void {
-  ipcMain.handle(IPC.scanStart, async (_e, payload: unknown) => {
+export interface IpcHooks {
+  /** Called with every handler failure before it is re-thrown to the renderer. */
+  onError?: (channel: string, err: unknown) => void;
+}
+
+export function registerIpc(engine: Engine, hooks: IpcHooks = {}): void {
+  // Same as ipcMain.handle, but every failure is reported to hooks.onError
+  // (the beta debug log) before it propagates to the renderer.
+  const handle = (
+    channel: string,
+    fn: (e: Electron.IpcMainInvokeEvent, payload: unknown) => unknown,
+  ): void => {
+    ipcMain.handle(channel, async (e, payload: unknown) => {
+      try {
+        return await fn(e, payload);
+      } catch (err) {
+        hooks.onError?.(channel, err);
+        throw err;
+      }
+    });
+  };
+
+  handle(IPC.scanStart, async (_e, payload: unknown) => {
     const p = asRecord(IPC.scanStart, payload);
     if (!Array.isArray(p.categories) || p.categories.length === 0)
       bad(IPC.scanStart, 'categories must be a non-empty array');
@@ -62,18 +83,18 @@ export function registerIpc(engine: Engine): void {
     return engine.scanStart(p.categories as ScanCategory[], roots);
   });
 
-  ipcMain.handle(IPC.scanCancel, async (_e, payload: unknown) => {
+  handle(IPC.scanCancel, async (_e, payload: unknown) => {
     const p = asRecord(IPC.scanCancel, payload);
     return engine.scanCancel(nonEmptyString(IPC.scanCancel, p.runId, 'runId'));
   });
 
-  ipcMain.handle(IPC.planGet, async (_e, payload: unknown) => {
+  handle(IPC.planGet, async (_e, payload: unknown) => {
     const p = asRecord(IPC.planGet, payload);
     return engine.planGet(nonEmptyString(IPC.planGet, p.runId, 'runId'));
   });
 
   // THE HUMAN GATE — only verdict ids cross this boundary, never paths.
-  ipcMain.handle(IPC.planApprove, async (_e, payload: unknown) => {
+  handle(IPC.planApprove, async (_e, payload: unknown) => {
     const p = asRecord(IPC.planApprove, payload);
     const planId = nonEmptyString(IPC.planApprove, p.planId, 'planId');
     if (!Array.isArray(p.verdictIds) || p.verdictIds.length === 0)
@@ -84,25 +105,25 @@ export function registerIpc(engine: Engine): void {
     return engine.planApprove(planId, verdictIds);
   });
 
-  ipcMain.handle(IPC.appsList, async () => engine.appsList());
+  handle(IPC.appsList, async () => engine.appsList());
 
-  ipcMain.handle(IPC.appsUninstall, async (_e, payload: unknown) => {
+  handle(IPC.appsUninstall, async (_e, payload: unknown) => {
     const p = asRecord(IPC.appsUninstall, payload);
     return engine.appsUninstall(nonEmptyString(IPC.appsUninstall, p.key, 'key'));
   });
 
-  ipcMain.handle(IPC.procsList, async () => engine.procsList());
+  handle(IPC.procsList, async () => engine.procsList());
 
-  ipcMain.handle(IPC.procsKill, async (_e, payload: unknown) => {
+  handle(IPC.procsKill, async (_e, payload: unknown) => {
     const p = asRecord(IPC.procsKill, payload);
     return engine.procsKill(positiveInt(IPC.procsKill, p.pid, 'pid'));
   });
 
-  ipcMain.handle(IPC.diskStatus, async () => engine.diskStatus());
+  handle(IPC.diskStatus, async () => engine.diskStatus());
 
   // v1 is ADVISORY: SweepDeck never executes elevated commands. We return the
   // command + instructions; consent is still structurally required.
-  ipcMain.handle(IPC.diskTrim, async (_e, payload: unknown) => {
+  handle(IPC.diskTrim, async (_e, payload: unknown) => {
     const p = asRecord(IPC.diskTrim, payload);
     if (p.consent !== true) bad(IPC.diskTrim, 'consent must be exactly true');
 
@@ -132,7 +153,7 @@ export function registerIpc(engine: Engine): void {
     };
   });
 
-  ipcMain.handle(IPC.graphQuery, async (_e, payload: unknown) => {
+  handle(IPC.graphQuery, async (_e, payload: unknown) => {
     const p = asRecord(IPC.graphQuery, payload);
     const queryId = nonEmptyString(IPC.graphQuery, p.queryId, 'queryId') as GraphQueryId;
     if (!GRAPH_QUERY_IDS.includes(queryId))
@@ -146,9 +167,9 @@ export function registerIpc(engine: Engine): void {
     return engine.graphQuery(queryId, params);
   });
 
-  ipcMain.handle(IPC.receiptsList, async () => engine.receiptsList());
+  handle(IPC.receiptsList, async () => engine.receiptsList());
 
-  ipcMain.handle(IPC.receiptsUndo, async (_e, payload: unknown) => {
+  handle(IPC.receiptsUndo, async (_e, payload: unknown) => {
     const p = asRecord(IPC.receiptsUndo, payload);
     return engine.receiptsUndo(positiveInt(IPC.receiptsUndo, p.receiptId, 'receiptId'));
   });

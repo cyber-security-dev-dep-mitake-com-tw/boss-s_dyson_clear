@@ -50,3 +50,23 @@ sudo xattr -d com.apple.quarantine /Applications/SweepDeck.app
 ```
 
 then reopen the app
+
+## Release channels (beta vs production)
+
+The channel is decided **at build time from the release tag**, so production
+bundles contain no debug code at all.
+
+| Tag | Channel | Debug tools |
+| --- | --- | --- |
+| `v1.2.3` | production | none (stripped from the bundle) |
+| `v1.2.3-beta.1`, `-rc.1`, `-alpha.2` | beta | Debug panel, engine log, bug-report export, `--selftest` |
+
+Local builds default to production; build a beta locally with:
+
+```bash
+SWEEPDECK_CHANNEL=beta npm run build
+npx electron packages/app --selftest   # headless self-test, exit code 0 = pass
+```
+
+Beta logs and self-test / bug reports are written to `<userData>/logs/`
+(macOS: `~/Library/Application Support/@sweepdeck/app/logs/` in dev, `~/Library/Application Support/SweepDeck/logs/` when packaged).
