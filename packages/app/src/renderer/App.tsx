@@ -9,6 +9,7 @@ import { Duplicates } from './screens/Duplicates';
 import { DiskStatus } from './screens/DiskStatus';
 import { Processes } from './screens/Processes';
 import { Receipts } from './screens/Receipts';
+import { Debug } from './screens/Debug';
 import { ReceiptToast } from './components/ReceiptToast';
 import { EmptyState } from './components/States';
 
@@ -40,6 +41,8 @@ function Screen({ view }: { view: ViewId }): JSX.Element {
       return <Processes />;
     case 'receipts':
       return <Receipts />;
+    case 'debug':
+      return __SWEEPDECK_BETA__ ? <Debug /> : <Dashboard />;
     case 'settings':
       return (
         <EmptyState
@@ -98,6 +101,11 @@ function StatusBar(): JSX.Element {
       <span>
         {receipts ? `${receipts.length} receipt${receipts.length === 1 ? '' : 's'}` : 'no receipts yet'}
       </span>
+      {__SWEEPDECK_BETA__ && (
+        <span className="pill fail" title="Beta build — debug tools enabled">
+          BETA
+        </span>
+      )}
       <span>v{window.appInfo?.version ?? '0.0.0'}</span>
     </footer>
   );
@@ -174,6 +182,18 @@ export function App(): JSX.Element {
             </span>
             Settings
           </button>
+          {__SWEEPDECK_BETA__ && (
+            <button
+              className={view === 'debug' ? 'active' : ''}
+              aria-current={view === 'debug' ? 'page' : undefined}
+              onClick={() => setView('debug')}
+            >
+              <span className="ic" aria-hidden="true">
+                ⚑
+              </span>
+              Debug (beta)
+            </button>
+          )}
         </nav>
       </aside>
 

@@ -7,6 +7,13 @@ on:
 permissions:
   contents: write
 
+# Release channel comes from the tag:
+#   v1.2.3          → production (no debug code in the bundle)
+#   v1.2.3-beta.1   → beta       (Debug panel, engine log, --selftest)
+# electron.vite.config.ts reads RELEASE_TAG at build time.
+env:
+  RELEASE_TAG: ${{ github.ref_name }}
+
 jobs:
   build-windows:
     runs-on: windows-latest
@@ -20,6 +27,10 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Stamp app version from tag
+        shell: bash
+        run: npm version "${RELEASE_TAG#v}" --no-git-tag-version --allow-same-version -w packages/app
 
       - name: Build packages
         run: npm run build
@@ -67,6 +78,10 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Stamp app version from tag
+        shell: bash
+        run: npm version "${RELEASE_TAG#v}" --no-git-tag-version --allow-same-version -w packages/app
 
       - name: Build packages
         run: npm run build
@@ -126,6 +141,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           draft: false
+          # tags with a pre-release suffix (v1.2.3-beta.1) are beta builds
+          prerelease: ${{ contains(github.ref_name, '-') }}
           generate_release_notes: true
           files: |
             artifacts/*.exe

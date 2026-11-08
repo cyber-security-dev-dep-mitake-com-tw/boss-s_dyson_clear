@@ -15,7 +15,7 @@
 import os from 'node:os';
 import path from 'node:path';
 import { readdir, lstat } from 'node:fs/promises';
-import { walk, treeSize } from './walk.js';
+import { walk, treeSize, allocatedSize } from './walk.js';
 import { prov } from '../graph/provenance.js';
 import { emptyResult, type Candidate, type ScanContext, type ScannerResult } from './types.js';
 
@@ -134,6 +134,44 @@ function winLocations(home: string): CacheLocation[] {
   ];
 }
 
+/**
+ * ~/Library/Caches entries owned by macOS daemons and guarded by SIP / TCC
+ * data-vault protection: rename() fails with EPERM even though the user owns
+ * the directory, so offering them only produces failed receipts.
+ */
+const MAC_PROTECTED_CACHE_NAMES = new Set([
+  'cloudkit',
+  'familycircle',
+  'geoservices',
+  'passkit',
+  'com.apple.homekit',
+  'com.apple.containermanagerd',
+  'com.apple.ap.adprivacyd',
+]);
+
+export function isMacProtectedCache(dir: string, name: string): boolean {
+  if (!/[\\/]Library[\\/]Caches$/.test(dir)) return false;
+  const n = name.toLowerCase();
+  if (MAC_PROTECTED_CACHE_NAMES.has(n)) return true;
+  // com.apple.* daemon caches — Safari is covered by its own browser location
+  return n.startsWith('com.apple.') && n !== 'com.apple.safari';
+}
+
+/**
+ * Drop entries of a broad location that are (or contain) a more specific
+ * location — e.g. Caches/Google when Caches/Google/Chrome is scanned on its
+ * own. Without this the same bytes are listed twice and trashing the parent
+ * makes the child's receipt fail with ENOENT.
+ */
+export function overlapsSpecificLocation(entryPath: string, locations: string[]): boolean {
+  const norm = (p: string) => p.replace(/[\\/]+$/, '');
+  const e = norm(entryPath);
+  return locations.some((l) => {
+    const loc = norm(l);
+    return loc === e || loc.startsWith(e + path.sep) || loc.startsWith(e + '/');
+  });
+}
+
 async function scanReal(ctx: ScanContext): Promise<ScannerResult> {
   const result = emptyResult();
   const home = os.homedir();
@@ -173,11 +211,14 @@ async function scanReal(ctx: ScanContext): Promise<ScannerResult> {
         continue;
       }
       if (st.isSymbolicLink()) continue;
+      if (process.platform === 'darwin' && isMacProtectedCache(loc.dir, name)) continue;
+      const specific = locations.filter((l) => l !== loc).map((l) => l.dir);
+      if (overlapsSpecificLocation(full, specific)) continue;
       // /private/tmp: only entries the current user owns
       if (loc.rule === 'mac.private-tmp' && uid !== null && st.uid !== uid) continue;
 
       const isDir = st.isDirectory();
-      const size = isDir ? await treeSize(full, { signal: ctx.signal }) : st.size;
+      const size = isDir ? await treeSize(full, { signal: ctx.signal }) : allocatedSize(st);
       locBytes += size;
       result.scannedFiles++;
 

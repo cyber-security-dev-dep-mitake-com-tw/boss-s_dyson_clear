@@ -23,7 +23,9 @@ function insightText(row: Record<string, unknown>): { head: string; sub: string 
     }
     return null;
   };
-  const name = str(['app', 'name', 'label', 'owner', 'path']) ?? 'Unknown';
+  const rawName = str(['appName', 'app', 'name', 'label', 'owner', 'appKey', 'path']);
+  // graph keys look like "browser:Google Chrome" — show the human part
+  const name = rawName ? rawName.replace(/^browser:/, '') : 'Unknown app';
   const bytes = num(['bytes', 'totalBytes', 'sizeBytes', 'size']);
   const count = num(['locations', 'count', 'files', 'paths']);
   const head = bytes !== null
@@ -127,7 +129,7 @@ export function Dashboard(): JSX.Element {
         <div>
           <h1>Dashboard</h1>
           <span className="sec">
-            {disk ? `${disk.volumes.length} volume${disk.volumes.length === 1 ? '' : 's'} tracked` : 'Engine status below'}
+            {disk ? `${disk.volumes.length} disk${disk.volumes.length === 1 ? '' : 's'} tracked` : 'Engine status below'}
           </span>
         </div>
         <div className="grow" />
@@ -144,9 +146,14 @@ export function Dashboard(): JSX.Element {
             let segments: DonutSegment[];
             if (vi === 0 && disk.breakdown.length > 0) {
               const top = [...disk.breakdown].sort((a, b) => b.bytes - a.bytes).slice(0, 4);
-              const rest = Math.max(0, v.usedBytes - top.reduce((s, d) => s + d.bytes, 0));
-              segments = top.map((d, i) => ({ label: d.path, bytes: d.bytes, color: CHART[i] }));
-              if (rest > 0) segments.push({ label: 'Other', bytes: rest, color: CHART[4] });
+              // never draw more than is used — clamp each segment to what's left
+              let left = v.usedBytes;
+              segments = top.map((d, i) => {
+                const bytes = Math.min(d.bytes, left);
+                left -= bytes;
+                return { label: d.path, bytes, color: CHART[i] };
+              });
+              if (left > 0) segments.push({ label: 'Other (system, apps, other users)', bytes: left, color: CHART[4] });
             } else {
               segments = [{ label: 'Used', bytes: v.usedBytes, color: CHART[0] }];
             }

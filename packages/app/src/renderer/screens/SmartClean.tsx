@@ -4,7 +4,7 @@
  */
 import { useMemo, useState } from 'react';
 import type { Verdict } from '@contracts';
-import { useStore } from '../store';
+import { useStore, isExecutable } from '../store';
 import { fmtBytes, isBlocked } from '../format';
 import { ProgressStream } from '../components/ProgressStream';
 import { ConfidenceBadge } from '../components/ConfidenceBadge';
@@ -37,10 +37,10 @@ function groupByRule(verdicts: Verdict[]): RuleGroup[] {
   }
   const groups: RuleGroup[] = [];
   for (const [rule, vs] of map) {
-    const blocked = vs.every((v) => isBlocked(v.provenance.confidence));
+    const blocked = vs.every((v) => isBlocked(v.provenance.confidence) || !isExecutable(v));
     const reason = blocked
       ? (typeof vs[0].detail.blockedReason === 'string' && vs[0].detail.blockedReason) ||
-        'blocked by verifier'
+        (vs.every((v) => !isExecutable(v)) ? 'review only (recently used or in use)' : 'blocked by verifier')
       : null;
     groups.push({
       rule,
@@ -88,7 +88,7 @@ export function SmartClean(): JSX.Element {
   );
   const groups = useMemo(() => groupByRule(verdicts), [verdicts]);
 
-  const selectedVerdicts = verdicts.filter((v) => selected[v.id]);
+  const selectedVerdicts = verdicts.filter((v) => selected[v.id] && isExecutable(v));
   const selBytes = selectedVerdicts.reduce((s, v) => s + (v.sizeBytes ?? 0), 0);
   const skippedGroups = groups.filter((g) => g.blocked).length;
 
@@ -223,8 +223,8 @@ export function SmartClean(): JSX.Element {
 
       <div style={{ marginTop: 16 }}>
         {groups.map((g) => {
-          const ids = g.verdicts.map((v) => v.id);
-          const allOn = ids.every((id) => selected[id]);
+          const ids = g.verdicts.filter((v) => !isBlockedId(g, v.id)).map((v) => v.id);
+          const allOn = ids.length > 0 && ids.every((id) => selected[id]);
           const someOn = ids.some((id) => selected[id]);
           return (
             <details className="group card" open={!g.blocked} key={g.rule}>
@@ -260,7 +260,8 @@ export function SmartClean(): JSX.Element {
               </summary>
               <div className="rows">
                 {g.verdicts.map((v) => {
-                  const blocked = isBlocked(v.provenance.confidence);
+                  const adviseOnly = !isExecutable(v);
+                  const blocked = isBlocked(v.provenance.confidence) || adviseOnly;
                   return (
                     <div className={`vrow ${blocked ? 'disabled' : ''}`} key={v.id}>
                       <input
@@ -273,7 +274,13 @@ export function SmartClean(): JSX.Element {
                       <span>
                         {v.label}
                         {blocked && (
-                          <span className="muted"> — {String(v.detail.blockedReason ?? 'blocked')}</span>
+                          <span className="muted">
+                            {' '}
+                            —{' '}
+                            {adviseOnly
+                              ? 'review only: recently used or held open, so it is not cleaned'
+                              : String(v.detail.blockedReason ?? 'blocked')}
+                          </span>
                         )}
                         <br />
                         <span className="path">{v.subjectKey}</span>
@@ -320,5 +327,5 @@ export function SmartClean(): JSX.Element {
 
 function isBlockedId(group: RuleGroup, id: number): boolean {
   const v = group.verdicts.find((x) => x.id === id);
-  return v ? isBlocked(v.provenance.confidence) : true;
+  return v ? isBlocked(v.provenance.confidence) || !isExecutable(v) : true;
 }

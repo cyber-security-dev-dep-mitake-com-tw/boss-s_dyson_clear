@@ -7,6 +7,9 @@
  *     files (real mode), or files currently held open (lsof, best-effort).
  * Every decision is recorded as provenance {scanner:'verifier@1', rule, ...}.
  */
+import { access, lstat } from 'node:fs/promises';
+import { constants as fsConst } from 'node:fs';
+import path from 'node:path';
 import { execFileBounded } from '../util/exec.js';
 import { prov } from '../graph/provenance.js';
 import type { Candidate } from '../scanners/types.js';
@@ -33,6 +36,12 @@ export interface VerifyOptions {
   appDirs?: string[];
   /** Injectable for tests; darwin-only lsof batch. */
   openFileCheck?: (paths: string[]) => Promise<Set<string>>;
+  /**
+   * Injectable for tests. Returns the subset of paths the current user can NOT
+   * move (real mode default: access(W_OK) on the parent, and on the item
+   * itself when it is a directory — moving a dir rewrites its "..").
+   */
+  unmovableCheck?: (paths: string[]) => Promise<Set<string>>;
 }
 
 export async function verify(candidates: Candidate[], opts: VerifyOptions = {}): Promise<VerifiedCandidate[]> {
@@ -49,6 +58,15 @@ export async function verify(candidates: Candidate[], opts: VerifyOptions = {}):
   } else if (opts.openFileCheck) {
     const targets = candidates.filter((c) => c.action === 'trash' && pathLike(c)).map((c) => c.subjectKey);
     openPaths = await opts.openFileCheck(targets);
+  }
+
+  // Non-mutating permission probe: SIP data-vault / root-owned items fail the
+  // real move with EPERM/EACCES, so reject them here instead of offering them.
+  let unmovable = new Set<string>();
+  const checkUnmovable = opts.unmovableCheck ?? (!opts.root ? unmovablePaths : null);
+  if (checkUnmovable) {
+    const targets = candidates.filter((c) => c.action === 'trash' && pathLike(c)).map((c) => c.subjectKey);
+    unmovable = await checkUnmovable(targets);
   }
 
   for (const c of candidates) {
@@ -75,6 +93,13 @@ export async function verify(candidates: Candidate[], opts: VerifyOptions = {}):
           prov(VERIFIER, 'verify.junk.user-content-dir', { path: c.subjectKey, reason: 'under Documents/Desktop/Pictures' }, 1),
         );
       }
+    }
+
+    if (status !== 'rejected' && action === 'trash' && unmovable.has(c.subjectKey)) {
+      status = 'rejected';
+      decisions.push(
+        prov(VERIFIER, 'verify.not-movable', { path: c.subjectKey, reason: 'protected by the OS (no write permission)' }, 1),
+      );
     }
 
     if (status !== 'rejected' && action === 'trash') {
@@ -120,6 +145,24 @@ export async function verify(candidates: Candidate[], opts: VerifyOptions = {}):
     }
     out.push({ ...c, action, status, smartSelected, verifierProvenance: decisions });
   }
+  return out;
+}
+
+/** Paths whose parent (or, for directories, the dir itself) isn't writable. */
+async function unmovablePaths(paths: string[]): Promise<Set<string>> {
+  const out = new Set<string>();
+  await Promise.all(
+    paths.map(async (p) => {
+      try {
+        await access(path.dirname(p), fsConst.W_OK);
+        const st = await lstat(p);
+        if (st.isDirectory()) await access(p, fsConst.W_OK);
+      } catch (err) {
+        const code = (err as NodeJS.ErrnoException).code;
+        if (code === 'EACCES' || code === 'EPERM' || code === 'EROFS') out.add(p);
+      }
+    }),
+  );
   return out;
 }
 
